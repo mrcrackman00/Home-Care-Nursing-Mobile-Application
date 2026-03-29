@@ -1,0 +1,15 @@
+﻿Analyzing homecare_app...                                       
+
+   info - Unnecessary use of string interpolation - lib\screens\nurse\nurse_history_screen.dart:81:46 - unnecessary_string_interpolations
+   info - 'activeColor' is deprecated and shouldn't be used. Use activeThumbColor instead. This feature was deprecated after v3.31.0-2.0.pre - lib\screens\nurse\nurse_home_screen.dart:187:29 - deprecated_member_use
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\screens\nurse\nurse_home_screen.dart:776:67 - use_build_context_synchronously
+   info - Uses 'await' on an instance of 'LatLng', which is not a subtype of 'Future' - lib\screens\patient\booking_screen.dart:410:24 - await_only_futures
+   info - Don't use 'BuildContext's across async gaps - lib\screens\patient\booking_screen.dart:412:30 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\screens\patient\patient_home_screen.dart:572:67 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\screens\patient\rating_screen.dart:100:56 - use_build_context_synchronously
+   info - Unnecessary use of string interpolation - lib\screens\patient\tracking_screen.dart:259:44 - unnecessary_string_interpolations
+  error - The named parameter 'settings' is required, but there's no corresponding argument - lib\services\notification_service.dart:52:31 - missing_required_argument
+  error - Too many positional arguments: 0 expected, but 1 found - lib\services\notification_service.dart:52:42 - extra_positional_arguments_could_be_named
+  error - The named parameter 'id' is required, but there's no corresponding argument - lib\services\notification_service.dart:60:29 - missing_required_argument
+  error - Too many positional arguments: 0 expected, but 4 found - lib\services\notification_service.dart:61:11 - extra_positional_arguments_could_be_named
+
