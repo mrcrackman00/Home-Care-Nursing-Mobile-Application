@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HomeCare Admin Panel</title>
+    <link rel="stylesheet" href="css/admin.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+</head>
+<body>
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="logo-icon">
+                <span class="material-icons-round">medical_services</span>
+            </div>
+            <h2>HomeCare</h2>
+            <p class="tagline">Admin Panel</p>
+        </div>
+        <nav class="sidebar-nav">
+            <a href="#" class="nav-item active" data-page="dashboard" onclick="showPage('dashboard')">
+                <span class="material-icons-round">dashboard</span>
+                <span>Dashboard</span>
+            </a>
+            <a href="#" class="nav-item" data-page="users" onclick="showPage('users')">
+                <span class="material-icons-round">people</span>
+                <span>Users</span>
+            </a>
+            <a href="#" class="nav-item" data-page="nurses" onclick="showPage('nurses')">
+                <span class="material-icons-round">medical_services</span>
+                <span>Nurses</span>
+            </a>
+            <a href="#" class="nav-item" data-page="bookings" onclick="showPage('bookings')">
+                <span class="material-icons-round">event_note</span>
+                <span>Bookings</span>
+            </a>
+            <a href="#" class="nav-item" data-page="payments" onclick="showPage('payments')">
+                <span class="material-icons-round">payments</span>
+                <span>Payments</span>
+            </a>
+            <a href="#" class="nav-item" data-page="withdrawals" onclick="showPage('withdrawals')">
+                <span class="material-icons-round">account_balance</span>
+                <span>Withdrawals</span>
+            </a>
+            <a href="#" class="nav-item" data-page="pricing" onclick="showPage('pricing')">
+                <span class="material-icons-round">sell</span>
+                <span>Pricing</span>
+            </a>
+            <a href="#" class="nav-item" data-page="analytics" onclick="showPage('analytics')">
+                <span class="material-icons-round">analytics</span>
+                <span>Analytics</span>
+            </a>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Top Bar -->
+        <header class="topbar">
+            <button class="menu-toggle" onclick="toggleSidebar()">
+                <span class="material-icons-round">menu</span>
+            </button>
+            <h1 id="page-title">Dashboard</h1>
+            <div class="topbar-right">
+                <div class="admin-profile">
+                    <div class="admin-avatar">A</div>
+                    <span>Admin</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Dashboard Page -->
+        <section class="page active" id="page-dashboard">
+            <!-- Stats Cards -->
+            <div class="stats-grid">
+                <div class="stat-card" style="--accent: #0D9488">
+                    <div class="stat-icon"><span class="material-icons-round">people</span></div>
+                    <div class="stat-info">
+                        <h3 id="stat-patients">0</h3>
+                        <p>Total Patients</p>
+                    </div>
+                </div>
+                <div class="stat-card" style="--accent: #3B82F6">
+                    <div class="stat-icon"><span class="material-icons-round">medical_services</span></div>
+                    <div class="stat-info">
+                        <h3 id="stat-nurses">0</h3>
+                        <p>Total Nurses</p>
+                    </div>
+                </div>
+                <div class="stat-card" style="--accent: #F59E0B">
+                    <div class="stat-icon"><span class="material-icons-round">event_note</span></div>
+                    <div class="stat-info">
+                        <h3 id="stat-bookings">0</h3>
+                        <p>Total Bookings</p>
+                    </div>
+                </div>
+                <div class="stat-card" style="--accent: #10B981">
+                    <div class="stat-icon"><span class="material-icons-round">check_circle</span></div>
+                    <div class="stat-info">
+                        <h3 id="stat-completed">0</h3>
+                        <p>Completed</p>
+                    </div>
+                </div>
+                <div class="stat-card" style="--accent: #8B5CF6">
+                    <div class="stat-icon"><span class="material-icons-round">account_balance_wallet</span></div>
+                    <div class="stat-info">
+                        <h3 id="stat-revenue">₹0</h3>
+                        <p>Total Revenue</p>
+                    </div>
+                </div>
+                <div class="stat-card" style="--accent: #EF4444">
+                    <div class="stat-icon"><span class="material-icons-round">trending_up</span></div>
+                    <div class="stat-info">
+                        <h3 id="stat-commission">₹0</h3>
+                        <p>Commission Earned</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Revenue Projections -->
+            <div class="card">
+                <h2 class="card-title">💰 Revenue Projections</h2>
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Daily Orders</th>
+                                <th>Avg Price</th>
+                                <th>Monthly Revenue</th>
+                                <th>App Profit (20%)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>5 orders/day</td>
+                                <td>₹1,000</td>
+                                <td>₹1,50,000</td>
+                                <td class="profit">₹30,000</td>
+                            </tr>
+                            <tr>
+                                <td>10 orders/day</td>
+                                <td>₹1,000</td>
+                                <td>₹3,00,000</td>
+                                <td class="profit">₹60,000</td>
+                            </tr>
+                            <tr>
+                                <td>20 orders/day</td>
+                                <td>₹1,000</td>
+                                <td>₹6,00,000</td>
+                                <td class="profit">₹1,20,000</td>
+                            </tr>
+                            <tr>
+                                <td>50 orders/day</td>
+                                <td>₹1,000</td>
+                                <td>₹15,00,000</td>
+                                <td class="profit">₹3,00,000</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="card">
+                <h2 class="card-title">📋 Recent Bookings</h2>
+                <div id="recent-bookings" class="table-wrapper">
+                    <p class="empty-state">Connect Firebase to see real data</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Users Page -->
+        <section class="page" id="page-users">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">👤 Manage Users (Patients)</h2>
+                    <input type="text" class="search-input" placeholder="Search users..." id="search-users">
+                </div>
+                <div id="users-list" class="table-wrapper">
+                    <p class="empty-state">Connect Firebase to see users</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Nurses Page -->
+        <section class="page" id="page-nurses">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">👩‍⚕️ Manage Nurses</h2>
+                    <input type="text" class="search-input" placeholder="Search nurses..." id="search-nurses">
+                </div>
+                <div id="nurses-list" class="table-wrapper">
+                    <p class="empty-state">Connect Firebase to see nurses</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Bookings Page -->
+        <section class="page" id="page-bookings">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">📋 Manage Bookings</h2>
+                    <select class="filter-select" id="booking-filter">
+                        <option value="all">All</option>
+                        <option value="pending">Pending</option>
+                        <option value="accepted">Accepted</option>
+                        <option value="in_progress">In Progress</option>
+                        <option value="completed">Completed</option>
+                        <option value="cancelled">Cancelled</option>
+                    </select>
+                </div>
+                <div id="bookings-list" class="table-wrapper">
+                    <p class="empty-state">Connect Firebase to see bookings</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Payments Page -->
+        <section class="page" id="page-payments">
+            <div class="card">
+                <h2 class="card-title">💳 Payment History</h2>
+                <div id="payments-list" class="table-wrapper">
+                    <p class="empty-state">Connect Firebase to see payments</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Withdrawals Page -->
+        <section class="page" id="page-withdrawals">
+            <div class="card">
+                <h2 class="card-title">🏦 Withdrawal Requests</h2>
+                <div id="withdrawals-list" class="table-wrapper">
+                    <p class="empty-state">Connect Firebase to see withdrawals</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Pricing Page -->
+        <section class="page" id="page-pricing">
+            <div class="card">
+                <h2 class="card-title">💰 Price Chart</h2>
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Service Type</th>
+                                <th>Patient Pays (₹)</th>
+                                <th>Nurse Gets (₹)</th>
+                                <th>Commission</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>Basic Care (8-12 hr)</td><td>₹800 – ₹1,500</td><td>₹640 – ₹1,200</td><td>20%</td></tr>
+                            <tr><td>Full Day (24 hr)</td><td>₹1,500 – ₹3,500</td><td>₹1,200 – ₹2,800</td><td>20%</td></tr>
+                            <tr><td>Monthly Basic</td><td>₹20,000 – ₹35,000</td><td>₹16,000 – ₹28,000</td><td>20%</td></tr>
+                            <tr><td>ICU / Skilled Nurse</td><td>₹3,000 – ₹6,000</td><td>₹2,400 – ₹4,800</td><td>20%</td></tr>
+                            <tr><td>Private Direct Hire</td><td>₹40,000 – ₹65,000</td><td>Same amount</td><td>0%</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="card">
+                <h2 class="card-title">📊 Commission Model</h2>
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Service Price</th>
+                                <th>Nurse Gets</th>
+                                <th>App Commission</th>
+                                <th>Profit %</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>₹500</td><td>₹400</td><td>₹100</td><td class="profit">20%</td></tr>
+                            <tr><td>₹1,000</td><td>₹800</td><td>₹200</td><td class="profit">20%</td></tr>
+                            <tr><td>₹2,000</td><td>₹1,600</td><td>₹400</td><td class="profit">20%</td></tr>
+                            <tr><td>₹3,000</td><td>₹2,400</td><td>₹600</td><td class="profit">20%</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p class="hint">Recommended commission: 15% – 25%</p>
+            </div>
+        </section>
+
+        <!-- Analytics Page -->
+        <section class="page" id="page-analytics">
+            <div class="stats-grid cols-3">
+                <div class="stat-card large" style="--accent: #0D9488">
+                    <div class="stat-icon"><span class="material-icons-round">trending_up</span></div>
+                    <div class="stat-info">
+                        <h3 id="analytics-revenue">₹0</h3>
+                        <p>Total Revenue</p>
+                    </div>
+                </div>
+                <div class="stat-card large" style="--accent: #10B981">
+                    <div class="stat-icon"><span class="material-icons-round">monetization_on</span></div>
+                    <div class="stat-info">
+                        <h3 id="analytics-profit">₹0</h3>
+                        <p>Total Profit (Commission)</p>
+                    </div>
+                </div>
+                <div class="stat-card large" style="--accent: #3B82F6">
+                    <div class="stat-icon"><span class="material-icons-round">person_add</span></div>
+                    <div class="stat-info">
+                        <h3 id="analytics-users">0</h3>
+                        <p>Total Users</p>
+                    </div>
+                </div>
+            </div>
+            <div class="card">
+                <h2 class="card-title">📈 Monthly Business Projection</h2>
+                <div class="table-wrapper">
+                    <table>
+                        <thead><tr><th>Daily Orders</th><th>Avg Price</th><th>Monthly Revenue</th><th>App Profit (20%)</th></tr></thead>
+                        <tbody>
+                            <tr><td>5/day</td><td>₹1,000</td><td>₹1,50,000</td><td class="profit">₹30,000</td></tr>
+                            <tr><td>10/day</td><td>₹1,000</td><td>₹3,00,000</td><td class="profit">₹60,000</td></tr>
+                            <tr><td>20/day</td><td>₹1,000</td><td>₹6,00,000</td><td class="profit">₹1,20,000</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script src="js/app.js"></script>
+</body>
+</html>
