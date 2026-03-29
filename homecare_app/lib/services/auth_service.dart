@@ -12,6 +12,13 @@ class AuthService {
   // Auth state stream
   Stream<User?> get authStateChanges => _auth.authStateChanges();
 
+  // Helper to normalize phone to email
+  String normalizePhoneToEmail(String phone) {
+    // Remove all non-numeric characters for safety
+    final cleanPhone = phone.replaceAll(RegExp(r'[^0-9]'), '');
+    return 'phone_$cleanPhone@homecare.com';
+  }
+
   // Register with email and password
   Future<UserModel?> registerWithEmail({
     required String email,
@@ -37,6 +44,16 @@ class AuthService {
         );
 
         await _firestore.collection('users').doc(user.uid).set(userModel.toMap());
+        await _firestore.collection('user_private').doc(user.uid).set({
+          'uid': user.uid,
+          'role': role,
+          'email': email,
+          'phone': phone,
+          'fcmTokens': <String>[],
+          'bankDetails': <String, dynamic>{},
+          'createdAt': FieldValue.serverTimestamp(),
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
         
         // Create earnings doc for nurses
         if (role == 'nurse') {
@@ -45,7 +62,10 @@ class AuthService {
             'totalEarnings': 0.0,
             'withdrawableBalance': 0.0,
             'totalWithdrawn': 0.0,
+            'pendingWithdrawalBalance': 0.0,
             'totalJobs': 0,
+            'createdAt': FieldValue.serverTimestamp(),
+            'updatedAt': FieldValue.serverTimestamp(),
           });
         }
 
@@ -147,7 +167,10 @@ class AuthService {
 
   // Update user profile
   Future<void> updateUserProfile(String uid, Map<String, dynamic> data) async {
-    await _firestore.collection('users').doc(uid).update(data);
+    await _firestore.collection('users').doc(uid).update({
+      ...data,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
   }
 
   // Sign out

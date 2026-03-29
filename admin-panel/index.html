@@ -9,6 +9,32 @@
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
 </head>
 <body>
+    <section class="admin-login-shell" id="admin-login-shell">
+        <div class="admin-login-card">
+            <div class="login-brand">
+                <div class="logo-icon">
+                    <span class="material-icons-round">medical_services</span>
+                </div>
+                <h1>HomeCare Admin</h1>
+                <p>Secure access for operations, bookings, finance, and nurse monitoring.</p>
+            </div>
+            <form id="admin-login-form" class="admin-login-form">
+                <label>
+                    <span>Email</span>
+                    <input type="email" id="admin-email" placeholder="admin@homecare.com" required>
+                </label>
+                <label>
+                    <span>Password</span>
+                    <input type="password" id="admin-password" placeholder="Enter password" required>
+                </label>
+                <button type="submit" id="admin-login-button">Sign In</button>
+                <p class="login-help">Use a Firebase Auth account whose `users/{uid}.role` is set to `admin`.</p>
+                <p class="login-error" id="admin-login-error"></p>
+            </form>
+        </div>
+    </section>
+
+    <div class="admin-app hidden" id="admin-app">
     <!-- Sidebar -->
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-header">
@@ -63,10 +89,12 @@
             </button>
             <h1 id="page-title">Dashboard</h1>
             <div class="topbar-right">
+                <div class="admin-status" id="admin-status">Authenticated admin access</div>
                 <div class="admin-profile">
-                    <div class="admin-avatar">A</div>
-                    <span>Admin</span>
+                    <div class="admin-avatar" id="admin-avatar">A</div>
+                    <span id="admin-name">Admin</span>
                 </div>
+                <button class="signout-button" id="admin-signout" type="button">Sign Out</button>
             </div>
         </header>
 
@@ -74,42 +102,42 @@
         <section class="page active" id="page-dashboard">
             <!-- Stats Cards -->
             <div class="stats-grid">
-                <div class="stat-card" style="--accent: #0D9488">
+                <div class="stat-card" style="--accent: #178C92">
                     <div class="stat-icon"><span class="material-icons-round">people</span></div>
                     <div class="stat-info">
                         <h3 id="stat-patients">0</h3>
                         <p>Total Patients</p>
                     </div>
                 </div>
-                <div class="stat-card" style="--accent: #3B82F6">
+                <div class="stat-card" style="--accent: #2F6690">
                     <div class="stat-icon"><span class="material-icons-round">medical_services</span></div>
                     <div class="stat-info">
                         <h3 id="stat-nurses">0</h3>
                         <p>Total Nurses</p>
                     </div>
                 </div>
-                <div class="stat-card" style="--accent: #F59E0B">
+                <div class="stat-card" style="--accent: #5B8DB8">
                     <div class="stat-icon"><span class="material-icons-round">event_note</span></div>
                     <div class="stat-info">
                         <h3 id="stat-bookings">0</h3>
                         <p>Total Bookings</p>
                     </div>
                 </div>
-                <div class="stat-card" style="--accent: #10B981">
+                <div class="stat-card" style="--accent: #3F9A76">
                     <div class="stat-icon"><span class="material-icons-round">check_circle</span></div>
                     <div class="stat-info">
                         <h3 id="stat-completed">0</h3>
                         <p>Completed</p>
                     </div>
                 </div>
-                <div class="stat-card" style="--accent: #8B5CF6">
+                <div class="stat-card" style="--accent: #2F7A93">
                     <div class="stat-icon"><span class="material-icons-round">account_balance_wallet</span></div>
                     <div class="stat-info">
                         <h3 id="stat-revenue">₹0</h3>
                         <p>Total Revenue</p>
                     </div>
                 </div>
-                <div class="stat-card" style="--accent: #EF4444">
+                <div class="stat-card" style="--accent: #6F87B2">
                     <div class="stat-icon"><span class="material-icons-round">trending_up</span></div>
                     <div class="stat-info">
                         <h3 id="stat-commission">₹0</h3>
@@ -287,21 +315,21 @@
         <!-- Analytics Page -->
         <section class="page" id="page-analytics">
             <div class="stats-grid cols-3">
-                <div class="stat-card large" style="--accent: #0D9488">
+                <div class="stat-card large" style="--accent: #178C92">
                     <div class="stat-icon"><span class="material-icons-round">trending_up</span></div>
                     <div class="stat-info">
                         <h3 id="analytics-revenue">₹0</h3>
                         <p>Total Revenue</p>
                     </div>
                 </div>
-                <div class="stat-card large" style="--accent: #10B981">
+                <div class="stat-card large" style="--accent: #3F9A76">
                     <div class="stat-icon"><span class="material-icons-round">monetization_on</span></div>
                     <div class="stat-info">
                         <h3 id="analytics-profit">₹0</h3>
                         <p>Total Profit (Commission)</p>
                     </div>
                 </div>
-                <div class="stat-card large" style="--accent: #3B82F6">
+                <div class="stat-card large" style="--accent: #2F6690">
                     <div class="stat-icon"><span class="material-icons-round">person_add</span></div>
                     <div class="stat-info">
                         <h3 id="analytics-users">0</h3>
@@ -324,7 +352,8 @@
             </div>
         </section>
     </main>
+    </div>
 
-    <script src="js/app.js"></script>
+    <script type="module" src="js/app.js"></script>
 </body>
 </html>

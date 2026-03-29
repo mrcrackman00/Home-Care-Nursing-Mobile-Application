@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
+
 import '../../config/theme.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/booking_provider.dart';
 import '../../providers/location_provider.dart';
+import '../../widgets/healthcare_ui.dart';
+import '../shared/chat_screen.dart';
 
 class ActiveBookingScreen extends StatefulWidget {
   const ActiveBookingScreen({super.key});
-
   @override
   State<ActiveBookingScreen> createState() => _ActiveBookingScreenState();
 }
@@ -20,8 +24,7 @@ class _ActiveBookingScreenState extends State<ActiveBookingScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final bookingId = ModalRoute.of(context)!.settings.arguments as String?;
       if (bookingId != null) {
-        final bookingProvider = Provider.of<BookingProvider>(context, listen: false);
-        bookingProvider.listenToBooking(bookingId);
+        context.read<BookingProvider>().listenToBooking(bookingId);
       }
     });
   }
@@ -33,206 +36,116 @@ class _ActiveBookingScreenState extends State<ActiveBookingScreen> {
         builder: (context, bookingProvider, locationProvider, _) {
           final booking = bookingProvider.activeBooking;
           if (booking == null) {
-            return Container(
-              decoration: const BoxDecoration(gradient: AppTheme.darkGradient),
-              child: const Center(child: CircularProgressIndicator(color: AppTheme.primaryTeal)),
-            );
+            return const HealthcareBackground(child: Center(child: CircularProgressIndicator()));
           }
 
           final patientLocation = LatLng(booking.patientLocation.latitude, booking.patientLocation.longitude);
           final nurseLocation = locationProvider.currentLocation ?? patientLocation;
 
-          return Stack(
-            children: [
-              // Map showing route
-              FlutterMap(
-                options: MapOptions(initialCenter: nurseLocation, initialZoom: 14),
-                children: [
-                  TileLayer(
-                    urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                    userAgentPackageName: 'com.homecare.app',
-                  ),
-                  MarkerLayer(
-                    markers: [
-                      Marker(
-                        point: patientLocation,
-                        width: 40, height: 40,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: AppTheme.error,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white, width: 3),
-                          ),
-                          child: const Icon(Icons.person, color: Colors.white, size: 20),
-                        ),
-                      ),
-                      Marker(
-                        point: nurseLocation,
-                        width: 40, height: 40,
-                        child: Container(
-                          decoration: const BoxDecoration(
-                            gradient: AppTheme.primaryGradient,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(Icons.medical_services, color: Colors.white, size: 20),
-                        ),
-                      ),
-                    ],
-                  ),
-                  // Route line
-                  PolylineLayer(
-                    polylines: [
-                      Polyline(
-                        points: [nurseLocation, patientLocation],
-                        strokeWidth: 3,
-                        color: AppTheme.primaryTeal,
-                      ),
-                    ],
-                  ),
-                ],
+          return Stack(children: [
+            FlutterMap(
+              options: MapOptions(initialCenter: nurseLocation, initialZoom: 14),
+              children: [
+                TileLayer(
+                  urlTemplate: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+                  subdomains: const ['a', 'b', 'c', 'd'],
+                  userAgentPackageName: 'com.homecare.app',
+                ),
+                PolylineLayer(polylines: [Polyline(points: [nurseLocation, patientLocation], strokeWidth: 5, color: AppTheme.accent)]),
+                MarkerLayer(markers: [
+                  Marker(point: patientLocation, width: 44, height: 44, child: Container(decoration: BoxDecoration(color: AppTheme.error, shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 4)), child: const Icon(Icons.home_rounded, color: Colors.white, size: 20))),
+                  Marker(point: nurseLocation, width: 52, height: 52, child: DecoratedBox(decoration: const BoxDecoration(gradient: AppTheme.primaryGradient, shape: BoxShape.circle), child: const Icon(Icons.local_hospital_rounded, color: Colors.white, size: 24))),
+                ]),
+              ],
+            ),
+            Positioned.fill(child: IgnorePointer(child: DecoratedBox(decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.white.withValues(alpha: 0.38), Colors.transparent, AppTheme.background.withValues(alpha: 0.92)]))))),
+            SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                child: Row(children: [
+                  TopGlassButton(icon: Icons.arrow_back_ios_new_rounded, onPressed: () => Navigator.pop(context)),
+                  const SizedBox(width: 12),
+                  Expanded(child: FrostCard(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14), child: Text(booking.status == 'accepted' ? 'You are on the way to the patient' : 'Service is currently in progress', style: Theme.of(context).textTheme.titleSmall))),
+                ]),
               ),
-
-              // Back button
-              SafeArea(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Container(
-                    decoration: BoxDecoration(color: AppTheme.bgCard, shape: BoxShape.circle, boxShadow: AppTheme.cardShadow),
-                    child: IconButton(
-                      icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 20),
-                      onPressed: () => Navigator.pop(context),
+            ),
+            Positioned(
+              left: 20,
+              right: 20,
+              bottom: 20,
+              child: FrostCard(
+                padding: const EdgeInsets.fromLTRB(18, 12, 18, 18),
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: AppTheme.elevatedShadow,
+                child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Center(child: Container(width: 36, height: 4, decoration: BoxDecoration(color: AppTheme.divider, borderRadius: BorderRadius.circular(100)))),
+                  const SizedBox(height: 14),
+                  Row(children: [
+                    Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text(booking.serviceName, style: Theme.of(context).textTheme.titleLarge),
+                      const SizedBox(height: 4),
+                      Text('Patient: ${booking.patientName}', style: Theme.of(context).textTheme.bodyMedium),
+                    ])),
+                    const SizedBox(width: 12),
+                    StatusPill(label: booking.status.toUpperCase().replaceAll('_', ' '), color: booking.status == 'accepted' ? AppTheme.accent : const Color(0xFF7B4FEB)),
+                  ]),
+                  const SizedBox(height: 16),
+                  Row(children: [
+                    Expanded(child: AppMetricTile(label: 'Expected earning', value: '₹${booking.nurseEarning.toStringAsFixed(0)}', color: AppTheme.success, icon: Icons.currency_rupee_rounded)),
+                    const SizedBox(width: 12),
+                    Expanded(child: AppMetricTile(label: 'Distance / ETA', value: '${locationProvider.getDistanceTo(patientLocation)} / ${locationProvider.getETATo(patientLocation)}', color: AppTheme.accent, icon: Icons.navigation_outlined)),
+                  ]),
+                  const SizedBox(height: 16),
+                  FrostCard(
+                    padding: const EdgeInsets.all(14),
+                    color: AppTheme.background,
+                    child: Column(children: [
+                      Row(children: [
+                        const Icon(Icons.location_on_outlined, color: AppTheme.accent, size: 18),
+                        const SizedBox(width: 8),
+                        Expanded(child: Text(booking.patientAddress, style: Theme.of(context).textTheme.bodyMedium)),
+                      ]),
+                      const SizedBox(height: 14),
+                      Row(children: [
+                        Expanded(child: OutlinedButton.icon(onPressed: () => _launchPhone(booking.patientPhone), icon: const Icon(Icons.call_rounded, size: 18), label: const Text('Call'))),
+                        const SizedBox(width: 12),
+                        Expanded(child: OutlinedButton.icon(onPressed: () => _openChat(booking.id, booking.patientName), icon: const Icon(Icons.chat_bubble_outline_rounded, size: 18), label: const Text('Chat'))),
+                      ]),
+                    ]),
+                  ),
+                  const SizedBox(height: 16),
+                  if (booking.status == 'accepted')
+                    TapScale(onTap: () => bookingProvider.startService(booking.id), child: ElevatedButton(onPressed: () => bookingProvider.startService(booking.id), child: const Text('Start Service'))),
+                  if (booking.status == 'in_progress')
+                    TapScale(
+                      onTap: () {
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Waiting for patient confirmation to complete the service.')));
+                      },
+                      child: ElevatedButton(
+                        onPressed: () {
+                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Waiting for patient confirmation to complete the service.')));
+                        },
+                        style: ElevatedButton.styleFrom(backgroundColor: AppTheme.success),
+                        child: const Text('Service In Progress'),
+                      ),
                     ),
-                  ),
-                ),
+                ]),
               ),
-
-              // Bottom details
-              Positioned(
-                bottom: 0, left: 0, right: 0,
-                child: Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: AppTheme.bgCard,
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-                    boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 20, offset: const Offset(0, -5))],
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(width: 40, height: 4, margin: const EdgeInsets.only(bottom: 16), decoration: BoxDecoration(color: AppTheme.bgCardLight, borderRadius: BorderRadius.circular(2))),
-                      
-                      // Service + Patient
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(booking.serviceName, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-                              const SizedBox(height: 4),
-                              Text('Patient: ${booking.patientName}', style: const TextStyle(color: AppTheme.textSecondary)),
-                            ],
-                          ),
-                          Text('₹${booking.nurseEarning.toStringAsFixed(0)}', style: const TextStyle(color: AppTheme.success, fontSize: 24, fontWeight: FontWeight.bold)),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-
-                      // ETA
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: AppTheme.primaryTeal.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(Icons.navigation, color: AppTheme.primaryTeal, size: 18),
-                            const SizedBox(width: 8),
-                            Text(
-                              '${locationProvider.getDistanceTo(patientLocation)} • ETA: ${locationProvider.getETATo(patientLocation)}',
-                              style: const TextStyle(color: AppTheme.primaryTeal, fontWeight: FontWeight.w600),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Action buttons
-                      Row(
-                        children: [
-                          // Call
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              onPressed: () {},
-                              icon: const Icon(Icons.call, size: 18),
-                              label: const Text('Call'),
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: AppTheme.success,
-                                side: const BorderSide(color: AppTheme.success),
-                                padding: const EdgeInsets.symmetric(vertical: 14),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          // Chat
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              onPressed: () {},
-                              icon: const Icon(Icons.chat, size: 18),
-                              label: const Text('Chat'),
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: AppTheme.info,
-                                side: const BorderSide(color: AppTheme.info),
-                                padding: const EdgeInsets.symmetric(vertical: 14),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-
-                      // Start/Complete service
-                      if (booking.status == 'accepted')
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            onPressed: () => bookingProvider.startService(booking.id),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppTheme.primaryTeal,
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                            ),
-                            child: const Text('Start Service', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                          ),
-                        ),
-
-                      if (booking.status == 'in_progress')
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            onPressed: () {
-                              // Nurse waits for patient to mark complete
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Waiting for patient to confirm completion')),
-                              );
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppTheme.success,
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                            ),
-                            child: const Text('Service In Progress...', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          );
+            ),
+          ]);
         },
       ),
     );
+  }
+
+  Future<void> _launchPhone(String phone) async {
+    final uri = Uri(scheme: 'tel', path: phone);
+    if (await canLaunchUrl(uri)) await launchUrl(uri);
+  }
+
+  void _openChat(String bookingId, String counterpartName) {
+    final user = context.read<AuthProvider>().user;
+    if (user == null) return;
+    Navigator.push(context, MaterialPageRoute(builder: (_) => ChatScreen(threadId: bookingId, bookingId: bookingId, currentUserId: user.uid, currentUserName: user.name, counterpartName: counterpartName)));
   }
 }

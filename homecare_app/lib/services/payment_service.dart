@@ -39,7 +39,7 @@ class PaymentService {
         'email': email,
       },
       'theme': {
-        'color': '#0D9488', // AppTheme.primaryTeal
+        'color': '#178C92', // AppTheme.primaryTeal
       }
     };
 

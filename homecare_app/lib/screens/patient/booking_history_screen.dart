@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../config/theme.dart';
+
 import '../../providers/booking_provider.dart';
+import '../../widgets/healthcare_ui.dart';
+import '../../config/theme.dart';
 
 class BookingHistoryScreen extends StatelessWidget {
   const BookingHistoryScreen({super.key});
@@ -9,90 +11,57 @@ class BookingHistoryScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(gradient: AppTheme.darkGradient),
-        child: SafeArea(
+      body: HealthcareBackground(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  children: [
-                    IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.arrow_back_ios, color: Colors.white)),
-                    const Text('Booking History', style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
-                  ],
-                ),
+              Row(
+                children: [
+                  TopGlassButton(
+                    icon: Icons.arrow_back_ios_new_rounded,
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: SectionHeading(
+                      title: 'Booking history',
+                      subtitle:
+                          'Review completed, ongoing, and cancelled care sessions in one premium timeline.',
+                    ),
+                  ),
+                ],
               ),
+              const SizedBox(height: 20),
               Expanded(
                 child: Consumer<BookingProvider>(
                   builder: (context, provider, _) {
                     if (provider.bookings.isEmpty) {
-                      return const Center(
-                        child: Text('No bookings yet', style: TextStyle(color: AppTheme.textMuted)),
+                      return const EmptyStateView(
+                        icon: Icons.event_note_outlined,
+                        title: 'No booking history yet',
+                        subtitle:
+                            'Your completed and ongoing care sessions will appear here after your first booking.',
                       );
                     }
-                    return ListView.builder(
-                      padding: const EdgeInsets.all(16),
+
+                    return ListView.separated(
+                      padding: const EdgeInsets.only(bottom: 24),
                       itemCount: provider.bookings.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 14),
                       itemBuilder: (context, index) {
                         final booking = provider.bookings[index];
-                        return Container(
-                          margin: const EdgeInsets.only(bottom: 12),
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: AppTheme.bgCard,
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(booking.serviceName, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 16)),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                    decoration: BoxDecoration(
-                                      color: _getStatusColor(booking.status).withValues(alpha: 0.15),
-                                      borderRadius: BorderRadius.circular(20),
-                                    ),
-                                    child: Text(
-                                      booking.status.toUpperCase(),
-                                      style: TextStyle(color: _getStatusColor(booking.status), fontSize: 11, fontWeight: FontWeight.w600),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 8),
-                              Row(
-                                children: [
-                                  const Icon(Icons.calendar_today, size: 14, color: AppTheme.textMuted),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    '${booking.createdAt.day}/${booking.createdAt.month}/${booking.createdAt.year}',
-                                    style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13),
-                                  ),
-                                  const SizedBox(width: 16),
-                                  Text('₹${booking.totalAmount.toStringAsFixed(0)}', style: const TextStyle(color: AppTheme.primaryTeal, fontWeight: FontWeight.w600)),
-                                ],
-                              ),
-                              if (booking.nurseName != null) ...[
-                                const SizedBox(height: 6),
-                                Text('Nurse: ${booking.nurseName}', style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
-                              ],
-                              if (booking.rating != null) ...[
-                                const SizedBox(height: 6),
-                                Row(
-                                  children: List.generate(5, (i) => Icon(
-                                    i < booking.rating! ? Icons.star : Icons.star_border,
-                                    color: AppTheme.accentGold,
-                                    size: 16,
-                                  )),
-                                ),
-                              ],
-                            ],
-                          ),
+                        return _HistoryCard(
+                          status: booking.status,
+                          title: booking.serviceName,
+                          address: booking.patientAddress,
+                          amount: booking.totalAmount,
+                          duration: booking.duration,
+                          nurseName: booking.nurseName,
+                          rating: booking.rating,
+                          date:
+                              '${booking.createdAt.day}/${booking.createdAt.month}/${booking.createdAt.year}',
                         );
                       },
                     );
@@ -105,14 +74,126 @@ class BookingHistoryScreen extends StatelessWidget {
       ),
     );
   }
+}
 
-  Color _getStatusColor(String status) {
-    switch (status) {
-      case 'completed': return AppTheme.success;
-      case 'cancelled': return AppTheme.error;
-      case 'pending': return AppTheme.warning;
-      case 'in_progress': return AppTheme.primaryTeal;
-      default: return AppTheme.textMuted;
-    }
+class _HistoryCard extends StatelessWidget {
+  const _HistoryCard({
+    required this.status,
+    required this.title,
+    required this.address,
+    required this.amount,
+    required this.duration,
+    required this.date,
+    this.nurseName,
+    this.rating,
+  });
+
+  final String status;
+  final String title;
+  final String address;
+  final double amount;
+  final String duration;
+  final String date;
+  final String? nurseName;
+  final double? rating;
+
+  @override
+  Widget build(BuildContext context) {
+    final badge = switch (status) {
+      'completed' => const StatusPill(label: 'Completed', color: AppTheme.success),
+      'cancelled' => const StatusPill(label: 'Cancelled', color: AppTheme.error),
+      'pending' => const StatusPill(label: 'Pending', color: AppTheme.warning),
+      'in_progress' => const StatusPill(label: 'Ongoing', color: Color(0xFF7B4FEB)),
+      'accepted' => const StatusPill(label: 'Confirmed', color: AppTheme.accent),
+      _ => const StatusPill(label: 'Unknown', color: AppTheme.textDisabled),
+    };
+
+    return FrostCard(
+      padding: const EdgeInsets.all(18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: Theme.of(context).textTheme.titleLarge),
+                    const SizedBox(height: 6),
+                    Text(address, style: Theme.of(context).textTheme.bodyMedium),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              badge,
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: AppMetricTile(
+                  label: 'Booked on',
+                  value: date,
+                  color: AppTheme.accent,
+                  icon: Icons.calendar_today_outlined,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: AppMetricTile(
+                  label: 'Total paid',
+                  value: '₹${amount.toStringAsFixed(0)}',
+                  color: AppTheme.success,
+                  icon: Icons.currency_rupee_rounded,
+                ),
+              ),
+            ],
+          ),
+          if (nurseName != null) ...[
+            const SizedBox(height: 14),
+            FrostCard(
+              padding: const EdgeInsets.all(14),
+              color: AppTheme.background,
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    backgroundColor: AppTheme.accentLight,
+                    child: Text(
+                      nurseName![0].toUpperCase(),
+                      style: Theme.of(context)
+                          .textTheme
+                          .titleMedium
+                          ?.copyWith(color: AppTheme.accent),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(nurseName!, style: Theme.of(context).textTheme.titleSmall),
+                        const SizedBox(height: 4),
+                        Text(duration, style: Theme.of(context).textTheme.bodyMedium),
+                      ],
+                    ),
+                  ),
+                  if (rating != null)
+                    Text(
+                      '${rating!.toStringAsFixed(1)} ★',
+                      style: Theme.of(context)
+                          .textTheme
+                          .labelMedium
+                          ?.copyWith(color: AppTheme.warning),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
   }
 }

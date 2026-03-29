@@ -80,6 +80,6 @@ class NotificationService {
   }
 
   Future<void> _updateToken(String userId, String token) async {
-    await _firestoreService.updateUserField(userId, 'fcmToken', token);
+    await _firestoreService.addPrivateFcmToken(userId, token);
   }
 }

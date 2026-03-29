@@ -47,13 +47,26 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      _user = await _authService.registerWithEmail(
+      print('[Auth] Starting registration for $email...');
+
+      // Safety timeout for Firebase Web calls
+      final registerFuture = _authService.registerWithEmail(
         email: email,
         password: password,
         name: name,
         phone: phone,
         role: role,
       );
+
+      _user = await registerFuture.timeout(
+        const Duration(seconds: 15),
+        onTimeout: () {
+          print('[Auth] Registration timed out after 15s');
+          throw TimeoutException('Authentication service is not responding. Check your connection or Firebase Console settings.');
+        },
+      );
+
+      print('[Auth] Registration successful: ${_user?.uid}');
       if (_user != null) {
         _notificationService.initialize(_user!.uid);
       }
@@ -61,12 +74,19 @@ class AuthProvider extends ChangeNotifier {
       notifyListeners();
       return _user != null;
     } on FirebaseAuthException catch (e) {
+      print('[Auth Error] Code: ${e.code}, Message: ${e.message}');
       _error = _getAuthErrorMessage(e.code);
       _isLoading = false;
       notifyListeners();
       return false;
+    } on TimeoutException catch (e) {
+      _error = e.message;
+      _isLoading = false;
+      notifyListeners();
+      return false;
     } catch (e) {
-      _error = e.toString();
+      print('[Auth Catch-All] Error: $e');
+      _error = 'Error ($e). Make sure Authentication is enabled in Firebase Console.';
       _isLoading = false;
       notifyListeners();
       return false;
@@ -174,9 +194,35 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  // Guest Login Bypass (Development Only)
+  Future<void> loginAsGuest(String role) async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    // Simulate a short delay
+    await Future.delayed(const Duration(milliseconds: 500));
+
+    _user = UserModel(
+      uid: 'guest_${DateTime.now().millisecondsSinceEpoch}',
+      name: 'Guest User',
+      email: 'guest@homecare.com',
+      phone: '0000000000',
+      role: role,
+    );
+
+    _isLoading = false;
+    notifyListeners();
+    print('[Auth] Entered App in GUEST MODE');
+  }
+
   // Logout
   Future<void> logout() async {
-    await _authService.signOut();
+    try {
+      await _authService.signOut();
+    } catch (_) {
+      // Ignore errors during logout in guest mode
+    }
     _user = null;
     _error = null;
     notifyListeners();
@@ -193,17 +239,21 @@ class AuthProvider extends ChangeNotifier {
       case 'weak-password':
         return 'Password is too weak';
       case 'email-already-in-use':
-        return 'Email is already registered';
+        return 'This email or phone is already registered';
       case 'user-not-found':
-        return 'No user found with this email';
+        return 'No user found with this ID';
       case 'wrong-password':
         return 'Incorrect password';
       case 'invalid-email':
-        return 'Invalid email address';
+        return 'Invalid email or phone number';
       case 'too-many-requests':
         return 'Too many attempts. Try again later';
+      case 'network-request-failed':
+        return 'Network error. Please check your connection';
+      case 'operation-not-allowed':
+        return 'Email/Password login is not enabled in Firebase Console';
       default:
-        return 'Authentication failed. Please try again';
+        return 'Registration failed: $code. Please contact support.';
     }
   }
 }

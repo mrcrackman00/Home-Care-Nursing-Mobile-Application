@@ -1,311 +1,386 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../models/user_model.dart';
+
 import '../models/booking_model.dart';
+import '../models/booking_request_model.dart';
+import '../models/chat_model.dart';
 import '../models/earning_model.dart';
-import '../config/constants.dart';
+import '../models/user_model.dart';
 
 class FirestoreService {
+  FirestoreService();
+
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  static String bookingRequestId(String bookingId, String nurseId) {
+    return '${bookingId}_$nurseId';
+  }
+
+  CollectionReference<Map<String, dynamic>> get _users =>
+      _firestore.collection('users');
+
+  CollectionReference<Map<String, dynamic>> get _privateUsers =>
+      _firestore.collection('user_private');
+
+  CollectionReference<Map<String, dynamic>> get _bookings =>
+      _firestore.collection('bookings');
+
+  CollectionReference<Map<String, dynamic>> get _bookingRequests =>
+      _firestore.collection('booking_requests');
+
+  CollectionReference<Map<String, dynamic>> get _earnings =>
+      _firestore.collection('earnings');
+
+  CollectionReference<Map<String, dynamic>> get _payments =>
+      _firestore.collection('payments');
+
+  CollectionReference<Map<String, dynamic>> get _withdrawals =>
+      _firestore.collection('withdrawals');
+
+  CollectionReference<Map<String, dynamic>> get _chatThreads =>
+      _firestore.collection('chatThreads');
 
   // ======== USER OPERATIONS ========
 
   Future<UserModel?> getUser(String uid) async {
-    DocumentSnapshot doc = await _firestore.collection('users').doc(uid).get();
-    if (doc.exists) return UserModel.fromSnapshot(doc);
+    final doc = await _users.doc(uid).get();
+    if (doc.exists) {
+      return UserModel.fromSnapshot(doc);
+    }
     return null;
   }
 
   Stream<UserModel?> streamUser(String uid) {
-    return _firestore.collection('users').doc(uid).snapshots().map((doc) {
-      if (doc.exists) return UserModel.fromSnapshot(doc);
-      return null;
+    return _users.doc(uid).snapshots().map((doc) {
+      if (!doc.exists) {
+        return null;
+      }
+      return UserModel.fromSnapshot(doc);
     });
   }
 
   Future<void> updateUser(String uid, Map<String, dynamic> data) async {
-    await _firestore.collection('users').doc(uid).update(data);
+    await _users.doc(uid).update({
+      ...data,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
   }
 
   Future<void> updateUserField(String uid, String field, dynamic value) async {
-    await _firestore.collection('users').doc(uid).update({field: value});
+    await _users.doc(uid).update({
+      field: value,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  Future<void> upsertPrivateUser(
+    String uid,
+    Map<String, dynamic> data, {
+    bool merge = true,
+  }) async {
+    await _privateUsers.doc(uid).set(
+      {
+        ...data,
+        'updatedAt': FieldValue.serverTimestamp(),
+      },
+      SetOptions(merge: merge),
+    );
+  }
+
+  Future<void> addPrivateFcmToken(String uid, String token) async {
+    await upsertPrivateUser(uid, {
+      'fcmTokens': FieldValue.arrayUnion([token]),
+    });
   }
 
   // ======== NURSE OPERATIONS ========
 
-  // Get nearby online nurses (simplified - within a radius)
   Stream<List<UserModel>> streamOnlineNurses() {
-    return _firestore
-        .collection('users')
+    return _users
         .where('role', isEqualTo: 'nurse')
         .where('isOnline', isEqualTo: true)
         .where('isAvailable', isEqualTo: true)
         .where('verified', isEqualTo: true)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => UserModel.fromSnapshot(doc))
-            .toList());
+        .map((snapshot) {
+      return snapshot.docs.map(UserModel.fromSnapshot).toList();
+    });
   }
 
   Future<void> updateNurseLocation(String uid, GeoPoint location) async {
-    await _firestore.collection('users').doc(uid).update({
+    await _users.doc(uid).update({
       'currentLocation': location,
+      'updatedAt': FieldValue.serverTimestamp(),
     });
   }
 
   Future<void> setNurseOnlineStatus(String uid, bool isOnline) async {
-    await _firestore.collection('users').doc(uid).update({
+    await _users.doc(uid).update({
       'isOnline': isOnline,
       'isAvailable': isOnline,
+      'updatedAt': FieldValue.serverTimestamp(),
     });
   }
 
   // ======== BOOKING OPERATIONS ========
 
   Future<void> createBooking(BookingModel booking) async {
-    await _firestore.collection('bookings').doc(booking.id).set(booking.toMap());
-  }
-
-  Stream<BookingModel?> streamBooking(String bookingId) {
-    return _firestore.collection('bookings').doc(bookingId).snapshots().map((doc) {
-      if (doc.exists) return BookingModel.fromSnapshot(doc);
-      return null;
+    await _bookings.doc(booking.id).set({
+      ...booking.toMap(),
+      'dispatchState': 'searching',
+      'dispatchIndex': 0,
+      'dispatchCandidateIds': const [],
+      'rejectedNurseIds': const [],
+      'offeredNurseId': null,
+      'updatedAt': FieldValue.serverTimestamp(),
     });
   }
 
-  // Get pending bookings for nurses to accept
-  Stream<List<BookingModel>> streamPendingBookings() {
-    return _firestore
-        .collection('bookings')
-        .where('status', isEqualTo: 'pending')
-        .where('nurseId', isNull: true)
-        .orderBy('createdAt', descending: true)
-        .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => BookingModel.fromSnapshot(doc))
-            .toList());
+  Stream<BookingModel?> streamBooking(String bookingId) {
+    return _bookings.doc(bookingId).snapshots().map((doc) {
+      if (!doc.exists) {
+        return null;
+      }
+      return BookingModel.fromSnapshot(doc);
+    });
   }
 
-  // Get bookings for a patient
+  Stream<List<BookingModel>> streamPendingBookings(String nurseId) {
+    return _bookingRequests
+        .where('nurseId', isEqualTo: nurseId)
+        .where('status', isEqualTo: 'pending')
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs
+          .map(BookingRequestModel.fromSnapshot)
+          .map((request) => request.toBookingPreview())
+          .toList();
+    });
+  }
+
   Stream<List<BookingModel>> streamPatientBookings(String patientId) {
-    return _firestore
-        .collection('bookings')
+    return _bookings
         .where('patientId', isEqualTo: patientId)
         .orderBy('createdAt', descending: true)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => BookingModel.fromSnapshot(doc))
-            .toList());
+        .map((snapshot) {
+      return snapshot.docs.map(BookingModel.fromSnapshot).toList();
+    });
   }
 
-  // Get bookings for a nurse
   Stream<List<BookingModel>> streamNurseBookings(String nurseId) {
-    return _firestore
-        .collection('bookings')
+    return _bookings
         .where('nurseId', isEqualTo: nurseId)
         .orderBy('createdAt', descending: true)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => BookingModel.fromSnapshot(doc))
-            .toList());
+        .map((snapshot) {
+      return snapshot.docs.map(BookingModel.fromSnapshot).toList();
+    });
   }
 
-  // Get active booking for a nurse
   Stream<BookingModel?> streamActiveNurseBooking(String nurseId) {
-    return _firestore
-        .collection('bookings')
+    return _bookings
         .where('nurseId', isEqualTo: nurseId)
         .where('status', whereIn: ['accepted', 'in_progress'])
         .snapshots()
         .map((snapshot) {
-          if (snapshot.docs.isNotEmpty) {
-            return BookingModel.fromSnapshot(snapshot.docs.first);
-          }
-          return null;
-        });
-  }
+      if (snapshot.docs.isEmpty) {
+        return null;
+      }
 
-  // Nurse accepts booking
-  Future<void> acceptBooking(String bookingId, String nurseId, String nurseName) async {
-    await _firestore.collection('bookings').doc(bookingId).update({
-      'nurseId': nurseId,
-      'nurseName': nurseName,
-      'status': 'accepted',
-    });
-    
-    // Set nurse as unavailable
-    await _firestore.collection('users').doc(nurseId).update({
-      'isAvailable': false,
+      final docs = snapshot.docs.toList()
+        ..sort((a, b) {
+        final aTime = a.data()['createdAt'] as Timestamp?;
+        final bTime = b.data()['createdAt'] as Timestamp?;
+        return (bTime?.millisecondsSinceEpoch ?? 0)
+            .compareTo(aTime?.millisecondsSinceEpoch ?? 0);
+      });
+
+      return BookingModel.fromSnapshot(docs.first);
     });
   }
 
-  // Start service
+  Future<void> acceptBooking(
+    String bookingId,
+    String nurseId,
+    String nurseName,
+  ) async {
+    final bookingRef = _bookings.doc(bookingId);
+    final requestRef = _bookingRequests.doc(bookingRequestId(bookingId, nurseId));
+    final nurseRef = _users.doc(nurseId);
+
+    await _firestore.runTransaction((transaction) async {
+      final bookingDoc = await transaction.get(bookingRef);
+      final requestDoc = await transaction.get(requestRef);
+      final nurseDoc = await transaction.get(nurseRef);
+
+      if (!bookingDoc.exists) {
+        throw Exception('Booking request no longer exists.');
+      }
+      if (!requestDoc.exists) {
+        throw Exception('This request is no longer available.');
+      }
+      if (!nurseDoc.exists) {
+        throw Exception('Nurse profile not found.');
+      }
+
+      final bookingData = bookingDoc.data()!;
+      final requestData = requestDoc.data()!;
+      final nurseData = nurseDoc.data()!;
+
+      final bookingStatus = bookingData['status'] as String? ?? 'pending';
+      final requestStatus = requestData['status'] as String? ?? 'pending';
+      final isAvailable = nurseData['isAvailable'] as bool? ?? false;
+      final isOnline = nurseData['isOnline'] as bool? ?? false;
+
+      if (bookingStatus != 'pending' || bookingData['nurseId'] != null) {
+        throw Exception('Another nurse has already accepted this booking.');
+      }
+      if (requestStatus != 'pending') {
+        throw Exception('This request has already been handled.');
+      }
+      if (!isOnline || !isAvailable) {
+        throw Exception('Go online and stay available before accepting requests.');
+      }
+
+      transaction.update(bookingRef, {
+        'nurseId': nurseId,
+        'nurseName': nurseName,
+        'status': 'accepted',
+        'acceptedAt': FieldValue.serverTimestamp(),
+        'dispatchState': 'accepted',
+        'offeredNurseId': nurseId,
+        'chatThreadId': bookingId,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+      transaction.update(requestRef, {
+        'status': 'accepted',
+        'respondedAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+      transaction.update(nurseRef, {
+        'isAvailable': false,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    });
+  }
+
+  Future<void> rejectBooking(String bookingId, String nurseId) async {
+    await _bookingRequests.doc(bookingRequestId(bookingId, nurseId)).update({
+      'status': 'rejected',
+      'respondedAt': FieldValue.serverTimestamp(),
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
   Future<void> startService(String bookingId) async {
-    await _firestore.collection('bookings').doc(bookingId).update({
+    await _bookings.doc(bookingId).update({
       'status': 'in_progress',
+      'startedAt': FieldValue.serverTimestamp(),
+      'updatedAt': FieldValue.serverTimestamp(),
     });
   }
 
-  // Complete booking
-  Future<void> completeBooking(String bookingId, String nurseId) async {
-    final bookingDoc = await _firestore.collection('bookings').doc(bookingId).get();
-    final booking = BookingModel.fromSnapshot(bookingDoc);
-
-    // Update booking
-    await _firestore.collection('bookings').doc(bookingId).update({
+  Future<void> completeBooking(String bookingId) async {
+    await _bookings.doc(bookingId).update({
       'status': 'completed',
-      'completedAt': Timestamp.now(),
-    });
-
-    // Calculate earnings
-    double commission = AppConstants.calculateCommission(booking.totalAmount);
-    double nurseEarning = AppConstants.calculateNurseEarning(booking.totalAmount);
-    
-    // Check if private hire (no commission)
-    if (booking.serviceType == 'private_hire') {
-      commission = 0;
-      nurseEarning = booking.totalAmount;
-    }
-
-    // Update nurse earnings
-    await _firestore.collection('earnings').doc(nurseId).update({
-      'totalEarnings': FieldValue.increment(nurseEarning),
-      'withdrawableBalance': FieldValue.increment(nurseEarning),
-      'totalJobs': FieldValue.increment(1),
-    });
-
-    // Add transaction record
-    final txnId = _firestore.collection('earnings').doc(nurseId)
-        .collection('transactions').doc().id;
-    await _firestore.collection('earnings').doc(nurseId)
-        .collection('transactions').doc(txnId).set({
-      'id': txnId,
-      'type': 'earning',
-      'amount': nurseEarning,
-      'bookingId': bookingId,
-      'status': 'completed',
-      'timestamp': Timestamp.now(),
-      'description': 'Earning from ${booking.serviceName}',
-    });
-
-    // Store payment record
-    final paymentId = _firestore.collection('payments').doc().id;
-    await _firestore.collection('payments').doc(paymentId).set({
-      'id': paymentId,
-      'bookingId': bookingId,
-      'patientId': booking.patientId,
-      'nurseId': nurseId,
-      'amount': booking.totalAmount,
-      'commission': commission,
-      'nurseEarning': nurseEarning,
-      'method': 'razorpay',
-      'status': 'completed',
-      'timestamp': Timestamp.now(),
-    });
-
-    // Set nurse as available again
-    await _firestore.collection('users').doc(nurseId).update({
-      'isAvailable': true,
+      'completedAt': FieldValue.serverTimestamp(),
+      'paymentStatus': 'settlement_pending',
+      'updatedAt': FieldValue.serverTimestamp(),
     });
   }
 
-  // Cancel booking
   Future<void> cancelBooking(String bookingId, String reason) async {
-    final bookingDoc = await _firestore.collection('bookings').doc(bookingId).get();
-    final booking = BookingModel.fromSnapshot(bookingDoc);
-    
-    await _firestore.collection('bookings').doc(bookingId).update({
+    await _bookings.doc(bookingId).update({
       'status': 'cancelled',
       'cancellationReason': reason,
+      'cancelledAt': FieldValue.serverTimestamp(),
+      'updatedAt': FieldValue.serverTimestamp(),
     });
-
-    // If nurse was assigned, make them available again
-    if (booking.nurseId != null) {
-      await _firestore.collection('users').doc(booking.nurseId!).update({
-        'isAvailable': true,
-      });
-    }
   }
 
-  // Rate booking
-  Future<void> rateBooking(String bookingId, String nurseId, double rating, String feedback) async {
-    await _firestore.collection('bookings').doc(bookingId).update({
+  Future<void> rateBooking(
+    String bookingId,
+    String nurseId,
+    double rating,
+    String feedback,
+  ) async {
+    await _bookings.doc(bookingId).update({
       'rating': rating,
       'feedback': feedback,
-    });
-
-    // Update nurse rating
-    final nurseDoc = await _firestore.collection('users').doc(nurseId).get();
-    final nurse = UserModel.fromSnapshot(nurseDoc);
-    final currentRating = nurse.rating ?? 0.0;
-    final totalRatings = nurse.totalRatings ?? 0;
-    final newTotalRatings = totalRatings + 1;
-    final newRating = ((currentRating * totalRatings) + rating) / newTotalRatings;
-
-    await _firestore.collection('users').doc(nurseId).update({
-      'rating': newRating,
-      'totalRatings': newTotalRatings,
+      'ratedAt': FieldValue.serverTimestamp(),
+      'updatedAt': FieldValue.serverTimestamp(),
     });
   }
 
   // ======== EARNINGS OPERATIONS ========
 
   Stream<EarningModel?> streamEarnings(String nurseId) {
-    return _firestore.collection('earnings').doc(nurseId).snapshots().map((doc) {
-      if (doc.exists) return EarningModel.fromSnapshot(doc);
-      return null;
+    return _earnings.doc(nurseId).snapshots().map((doc) {
+      if (!doc.exists) {
+        return null;
+      }
+      return EarningModel.fromSnapshot(doc);
     });
   }
 
   Stream<List<TransactionModel>> streamTransactions(String nurseId) {
-    return _firestore
-        .collection('earnings')
+    return _earnings
         .doc(nurseId)
         .collection('transactions')
         .orderBy('timestamp', descending: true)
         .limit(50)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => TransactionModel.fromMap(doc.data()))
-            .toList());
+        .map((snapshot) {
+      return snapshot.docs
+          .map((doc) => TransactionModel.fromMap(doc.data()))
+          .toList();
+    });
   }
 
-  // Today's earnings
   Future<double> getTodayEarnings(String nurseId) async {
     final now = DateTime.now();
     final startOfDay = DateTime(now.year, now.month, now.day);
-    
-    final snapshot = await _firestore
-        .collection('earnings')
+
+    final snapshot = await _earnings
         .doc(nurseId)
         .collection('transactions')
         .where('type', isEqualTo: 'earning')
-        .where('timestamp', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
+        .where(
+          'timestamp',
+          isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay),
+        )
         .get();
-    
+
     double total = 0;
-    for (var doc in snapshot.docs) {
-      total += (doc.data()['amount'] as num).toDouble();
+    for (final doc in snapshot.docs) {
+      total += (doc.data()['amount'] as num?)?.toDouble() ?? 0;
     }
     return total;
   }
 
-  // Weekly earnings
   Future<double> getWeeklyEarnings(String nurseId) async {
     final now = DateTime.now();
     final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
-    final start = DateTime(startOfWeek.year, startOfWeek.month, startOfWeek.day);
-    
-    final snapshot = await _firestore
-        .collection('earnings')
+    final weekStart = DateTime(
+      startOfWeek.year,
+      startOfWeek.month,
+      startOfWeek.day,
+    );
+
+    final snapshot = await _earnings
         .doc(nurseId)
         .collection('transactions')
         .where('type', isEqualTo: 'earning')
-        .where('timestamp', isGreaterThanOrEqualTo: Timestamp.fromDate(start))
+        .where(
+          'timestamp',
+          isGreaterThanOrEqualTo: Timestamp.fromDate(weekStart),
+        )
         .get();
-    
+
     double total = 0;
-    for (var doc in snapshot.docs) {
-      total += (doc.data()['amount'] as num).toDouble();
+    for (final doc in snapshot.docs) {
+      total += (doc.data()['amount'] as num?)?.toDouble() ?? 0;
     }
     return total;
   }
@@ -313,71 +388,110 @@ class FirestoreService {
   // ======== WITHDRAWAL OPERATIONS ========
 
   Future<void> requestWithdrawal(WithdrawalModel withdrawal) async {
-    final batch = _firestore.batch();
-    
-    // Create withdrawal record
-    batch.set(
-      _firestore.collection('withdrawals').doc(withdrawal.id),
-      withdrawal.toMap(),
-    );
-
-    // Deduct from withdrawable balance
-    batch.update(
-      _firestore.collection('earnings').doc(withdrawal.nurseId),
-      {
-        'withdrawableBalance': FieldValue.increment(-withdrawal.amount),
-        'totalWithdrawn': FieldValue.increment(withdrawal.amount),
-      },
-    );
-
-    // Add transaction
-    final txnId = _firestore.collection('earnings').doc(withdrawal.nurseId)
-        .collection('transactions').doc().id;
-    batch.set(
-      _firestore.collection('earnings').doc(withdrawal.nurseId)
-          .collection('transactions').doc(txnId),
-      {
-        'id': txnId,
-        'type': 'withdrawal',
-        'amount': withdrawal.amount,
-        'status': 'pending',
-        'timestamp': Timestamp.now(),
-        'description': 'Withdrawal request',
-      },
-    );
-
-    await batch.commit();
+    await _withdrawals.doc(withdrawal.id).set({
+      ...withdrawal.toMap(),
+      'status': 'pending',
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
   }
 
   Stream<List<WithdrawalModel>> streamWithdrawals(String nurseId) {
-    return _firestore
-        .collection('withdrawals')
+    return _withdrawals
         .where('nurseId', isEqualTo: nurseId)
         .orderBy('requestedAt', descending: true)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => WithdrawalModel.fromMap(doc.data()))
-            .toList());
+        .map((snapshot) {
+      return snapshot.docs
+          .map((doc) => WithdrawalModel.fromMap(doc.data()))
+          .toList();
+    });
+  }
+
+  // ======== CHAT OPERATIONS ========
+
+  Stream<ChatThreadModel?> streamChatThread(String threadId) {
+    return _chatThreads.doc(threadId).snapshots().map((doc) {
+      if (!doc.exists) {
+        return null;
+      }
+      return ChatThreadModel.fromSnapshot(doc);
+    });
+  }
+
+  Stream<List<ChatMessageModel>> streamChatMessages(String threadId) {
+    return _chatThreads
+        .doc(threadId)
+        .collection('messages')
+        .orderBy('createdAt')
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs.map(ChatMessageModel.fromSnapshot).toList();
+    });
+  }
+
+  Future<void> sendChatMessage({
+    required String threadId,
+    required String bookingId,
+    required String senderId,
+    required String senderName,
+    required String text,
+  }) async {
+    final trimmed = text.trim();
+    if (trimmed.isEmpty) {
+      return;
+    }
+
+    final messageRef = _chatThreads.doc(threadId).collection('messages').doc();
+    final message = ChatMessageModel(
+      id: messageRef.id,
+      threadId: threadId,
+      bookingId: bookingId,
+      senderId: senderId,
+      senderName: senderName,
+      text: trimmed,
+      readBy: [senderId],
+    );
+
+    await messageRef.set(message.toMap());
   }
 
   // ======== ADMIN OPERATIONS ========
 
   Future<Map<String, dynamic>> getAdminStats() async {
-    final users = await _firestore.collection('users').where('role', isEqualTo: 'patient').get();
-    final nurses = await _firestore.collection('users').where('role', isEqualTo: 'nurse').get();
-    final bookings = await _firestore.collection('bookings').get();
-    final completed = await _firestore.collection('bookings').where('status', isEqualTo: 'completed').get();
-    final payments = await _firestore.collection('payments').get();
-    
+    final patientsFuture = _users.where('role', isEqualTo: 'patient').get();
+    final nursesFuture = _users.where('role', isEqualTo: 'nurse').get();
+    final bookingsFuture = _bookings.get();
+    final completedFuture = _bookings.where('status', isEqualTo: 'completed').get();
+    final paymentsFuture = _payments.get();
+
+    final results = await Future.wait([
+      patientsFuture,
+      nursesFuture,
+      bookingsFuture,
+      completedFuture,
+      paymentsFuture,
+    ]);
+
+    final patients = results[0];
+    final nurses = results[1];
+    final bookings = results[2];
+    final completed = results[3];
+    final payments = results[4];
+
     double totalRevenue = 0;
     double totalCommission = 0;
-    for (var doc in payments.docs) {
-      totalRevenue += (doc.data()['amount'] as num).toDouble();
-      totalCommission += (doc.data()['commission'] as num).toDouble();
+
+    for (final doc in payments.docs) {
+      final data = doc.data();
+      totalRevenue += (data['amount'] as num?)?.toDouble() ?? 0;
+      totalCommission +=
+          (data['platformCommission'] as num?)?.toDouble() ??
+              (data['commission'] as num?)?.toDouble() ??
+              0;
     }
 
     return {
-      'totalPatients': users.docs.length,
+      'totalPatients': patients.docs.length,
       'totalNurses': nurses.docs.length,
       'totalBookings': bookings.docs.length,
       'completedBookings': completed.docs.length,

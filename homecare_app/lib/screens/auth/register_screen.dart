@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../config/theme.dart';
+
 import '../../config/routes.dart';
+import '../../config/theme.dart';
 import '../../providers/auth_provider.dart';
+import '../../widgets/healthcare_ui.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -30,286 +32,297 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   Future<void> _register() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
 
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    String email = _emailController.text.trim();
+
+    if (email.isEmpty && _phoneController.text.isNotEmpty) {
+      final phone = _phoneController.text
+          .trim()
+          .replaceAll(RegExp(r'[^0-9]'), '');
+      email = 'phone_$phone@homecare.com';
+    }
+
     final success = await authProvider.register(
-      email: _emailController.text.trim(),
+      email: email,
       password: _passwordController.text,
       name: _nameController.text.trim(),
       phone: _phoneController.text.trim(),
       role: _selectedRole,
     );
 
-    if (success && mounted) {
-      if (_selectedRole == 'nurse') {
-        Navigator.pushReplacementNamed(context, AppRoutes.nurseHome);
-      } else {
-        Navigator.pushReplacementNamed(context, AppRoutes.patientHome);
-      }
+    if (!success || !mounted) {
+      return;
+    }
+
+    Navigator.pushReplacementNamed(
+      context,
+      _selectedRole == 'nurse' ? AppRoutes.nurseHome : AppRoutes.patientHome,
+    );
+  }
+
+  Future<void> _previewExperience() async {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    await auth.loginAsGuest(_selectedRole);
+    if (mounted) {
+      Navigator.pushReplacementNamed(
+        context,
+        _selectedRole == 'nurse' ? AppRoutes.nurseHome : AppRoutes.patientHome,
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(gradient: AppTheme.darkGradient),
-        child: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Back button
-                  IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Create Account',
-                    style: Theme.of(context).textTheme.displaySmall,
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Join HomeCare today',
-                    style: TextStyle(color: AppTheme.textSecondary, fontSize: 16),
-                  ),
-                  const SizedBox(height: 32),
-
-                  // Role Selection
-                  Text('I am a', style: Theme.of(context).textTheme.titleMedium),
-                  const SizedBox(height: 12),
-                  Row(
+      body: HealthcareBackground(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(20, 18, 20, 26),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    TopGlassButton(
+                      icon: Icons.arrow_back_ios_new_rounded,
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                    const Spacer(),
+                    const StatusPill(
+                      label: 'Premium Onboarding',
+                      color: AppTheme.accent,
+                      icon: Icons.verified_outlined,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  'Create a care account that feels built for trust',
+                  style: Theme.of(context).textTheme.displaySmall,
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  'Join as a patient or nurse, keep your bookings organized, and move through the product with a polished hospital-grade experience.',
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        color: AppTheme.textSecondary,
+                      ),
+                ),
+                const SizedBox(height: 22),
+                FrostCard(
+                  padding: const EdgeInsets.all(24),
+                  borderRadius: BorderRadius.circular(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: GestureDetector(
-                          onTap: () => setState(() => _selectedRole = 'patient'),
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 300),
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            decoration: BoxDecoration(
-                              gradient: _selectedRole == 'patient'
-                                  ? AppTheme.primaryGradient
-                                  : null,
-                              color: _selectedRole == 'patient'
-                                  ? null
-                                  : AppTheme.bgCardLight,
-                              borderRadius: BorderRadius.circular(12),
-                              border: _selectedRole == 'patient'
-                                  ? null
-                                  : Border.all(color: AppTheme.bgCardLight),
+                      Text(
+                        'Choose your role',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _RoleTile(
+                              icon: Icons.favorite_border_rounded,
+                              title: 'Patient',
+                              subtitle: 'Book home nursing',
+                              selected: _selectedRole == 'patient',
+                              onTap: () {
+                                setState(() => _selectedRole = 'patient');
+                              },
                             ),
-                            child: Column(
-                              children: [
-                                Icon(
-                                  Icons.person_rounded,
-                                  size: 32,
-                                  color: _selectedRole == 'patient'
-                                      ? Colors.white
-                                      : AppTheme.textMuted,
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  'Patient',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    color: _selectedRole == 'patient'
-                                        ? Colors.white
-                                        : AppTheme.textMuted,
-                                  ),
-                                ),
-                              ],
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _RoleTile(
+                              icon: Icons.local_hospital_outlined,
+                              title: 'Nurse',
+                              subtitle: 'Accept visits & earn',
+                              selected: _selectedRole == 'nurse',
+                              accent: AppTheme.success,
+                              onTap: () {
+                                setState(() => _selectedRole = 'nurse');
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 22),
+                      _buildLabel(context, 'Full name'),
+                      const SizedBox(height: 8),
+                      TextFormField(
+                        controller: _nameController,
+                        decoration: const InputDecoration(
+                          hintText: 'Enter your full name',
+                          prefixIcon: Icon(Icons.person_outline_rounded),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Name is required';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      _buildLabel(context, 'Email'),
+                      const SizedBox(height: 8),
+                      TextFormField(
+                        controller: _emailController,
+                        keyboardType: TextInputType.emailAddress,
+                        decoration: const InputDecoration(
+                          hintText: 'Email (optional if using phone)',
+                          prefixIcon: Icon(Icons.email_outlined),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      _buildLabel(context, 'Phone number'),
+                      const SizedBox(height: 8),
+                      TextFormField(
+                        controller: _phoneController,
+                        keyboardType: TextInputType.phone,
+                        decoration: const InputDecoration(
+                          hintText: '+91 98765 43210',
+                          prefixIcon: Icon(Icons.phone_outlined),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Phone number is required';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      _buildLabel(context, 'Password'),
+                      const SizedBox(height: 8),
+                      TextFormField(
+                        controller: _passwordController,
+                        obscureText: _obscurePassword,
+                        decoration: InputDecoration(
+                          hintText: 'Create a secure password',
+                          prefixIcon: const Icon(Icons.lock_outline_rounded),
+                          suffixIcon: IconButton(
+                            onPressed: () {
+                              setState(() {
+                                _obscurePassword = !_obscurePassword;
+                              });
+                            },
+                            icon: Icon(
+                              _obscurePassword
+                                  ? Icons.visibility_off_outlined
+                                  : Icons.visibility_outlined,
                             ),
                           ),
                         ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Password is required';
+                          }
+                          if (value.length < 6) {
+                            return 'Use at least 6 characters';
+                          }
+                          return null;
+                        },
                       ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: GestureDetector(
-                          onTap: () => setState(() => _selectedRole = 'nurse'),
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 300),
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            decoration: BoxDecoration(
-                              gradient: _selectedRole == 'nurse'
-                                  ? AppTheme.primaryGradient
-                                  : null,
-                              color: _selectedRole == 'nurse'
-                                  ? null
-                                  : AppTheme.bgCardLight,
-                              borderRadius: BorderRadius.circular(12),
-                              border: _selectedRole == 'nurse'
-                                  ? null
-                                  : Border.all(color: AppTheme.bgCardLight),
-                            ),
-                            child: Column(
-                              children: [
-                                Icon(
-                                  Icons.medical_services_rounded,
-                                  size: 32,
-                                  color: _selectedRole == 'nurse'
-                                      ? Colors.white
-                                      : AppTheme.textMuted,
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  'Nurse',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    color: _selectedRole == 'nurse'
-                                        ? Colors.white
-                                        : AppTheme.textMuted,
+                      const SizedBox(height: 18),
+                      Consumer<AuthProvider>(
+                        builder: (context, auth, _) {
+                          if (auth.error == null) {
+                            return const SizedBox.shrink();
+                          }
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 14),
+                            child: FrostCard(
+                              padding: const EdgeInsets.all(14),
+                              color: const Color(0xFFFFF3F6),
+                              borderColor: AppTheme.error.withValues(alpha: 0.15),
+                              child: Row(
+                                children: [
+                                  const Icon(
+                                    Icons.error_outline_rounded,
+                                    color: AppTheme.error,
+                                    size: 18,
                                   ),
-                                ),
-                              ],
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Text(
+                                      auth.error!,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodyMedium
+                                          ?.copyWith(color: AppTheme.error),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
+                          );
+                        },
+                      ),
+                      Consumer<AuthProvider>(
+                        builder: (context, auth, _) {
+                          return TapScale(
+                            onTap: auth.isLoading ? null : _register,
+                            child: ElevatedButton(
+                              onPressed: auth.isLoading ? null : _register,
+                              child: auth.isLoading
+                                  ? const SizedBox(
+                                      width: 22,
+                                      height: 22,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2.4,
+                                        color: Colors.white,
+                                      ),
+                                    )
+                                  : Text(
+                                      _selectedRole == 'nurse'
+                                          ? 'Create Nurse Account'
+                                          : 'Create Patient Account',
+                                    ),
+                            ),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 14),
+                      TapScale(
+                        onTap: _previewExperience,
+                        child: OutlinedButton.icon(
+                          onPressed: _previewExperience,
+                          icon: const Icon(Icons.bolt_rounded),
+                          label: const Text('Preview The Experience'),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 24),
-
-                  // Name
-                  _buildLabel('Full Name'),
-                  const SizedBox(height: 8),
-                  TextFormField(
-                    controller: _nameController,
-                    style: const TextStyle(color: Colors.white),
-                    decoration: const InputDecoration(
-                      hintText: 'Enter your full name',
-                      prefixIcon: Icon(Icons.person_outline, color: AppTheme.primaryTeal),
-                    ),
-                    validator: (v) => v == null || v.isEmpty ? 'Name is required' : null,
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Email
-                  _buildLabel('Email'),
-                  const SizedBox(height: 8),
-                  TextFormField(
-                    controller: _emailController,
-                    keyboardType: TextInputType.emailAddress,
-                    style: const TextStyle(color: Colors.white),
-                    decoration: const InputDecoration(
-                      hintText: 'Enter your email',
-                      prefixIcon: Icon(Icons.email_outlined, color: AppTheme.primaryTeal),
-                    ),
-                    validator: (v) {
-                      if (v == null || v.isEmpty) return 'Email is required';
-                      if (!v.contains('@')) return 'Invalid email';
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Phone
-                  _buildLabel('Phone Number'),
-                  const SizedBox(height: 8),
-                  TextFormField(
-                    controller: _phoneController,
-                    keyboardType: TextInputType.phone,
-                    style: const TextStyle(color: Colors.white),
-                    decoration: const InputDecoration(
-                      hintText: '+91 XXXXXXXXXX',
-                      prefixIcon: Icon(Icons.phone_outlined, color: AppTheme.primaryTeal),
-                    ),
-                    validator: (v) => v == null || v.isEmpty ? 'Phone is required' : null,
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Password
-                  _buildLabel('Password'),
-                  const SizedBox(height: 8),
-                  TextFormField(
-                    controller: _passwordController,
-                    obscureText: _obscurePassword,
-                    style: const TextStyle(color: Colors.white),
-                    decoration: InputDecoration(
-                      hintText: 'Create a password',
-                      prefixIcon: const Icon(Icons.lock_outline, color: AppTheme.primaryTeal),
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          _obscurePassword ? Icons.visibility_off : Icons.visibility,
-                          color: AppTheme.textMuted,
-                        ),
-                        onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                ),
+                const SizedBox(height: 20),
+                Center(
+                  child: Wrap(
+                    alignment: WrapAlignment.center,
+                    spacing: 4,
+                    children: [
+                      Text(
+                        'Already have an account?',
+                        style: Theme.of(context).textTheme.bodyMedium,
                       ),
-                    ),
-                    validator: (v) {
-                      if (v == null || v.isEmpty) return 'Password is required';
-                      if (v.length < 6) return 'Min 6 characters';
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Error
-                  Consumer<AuthProvider>(
-                    builder: (context, auth, _) {
-                      if (auth.error != null) {
-                        return Container(
-                          padding: const EdgeInsets.all(12),
-                          margin: const EdgeInsets.only(bottom: 16),
-                          decoration: BoxDecoration(
-                            color: AppTheme.error.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Row(
-                            children: [
-                              const Icon(Icons.error_outline, color: AppTheme.error, size: 20),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(auth.error!, style: const TextStyle(color: AppTheme.error, fontSize: 13)),
-                              ),
-                            ],
-                          ),
-                        );
-                      }
-                      return const SizedBox();
-                    },
-                  ),
-
-                  // Register Button
-                  Consumer<AuthProvider>(
-                    builder: (context, auth, _) {
-                      return SizedBox(
-                        width: double.infinity,
-                        height: 56,
-                        child: ElevatedButton(
-                          onPressed: auth.isLoading ? null : _register,
-                          child: auth.isLoading
-                              ? const SizedBox(
-                                  width: 24, height: 24,
-                                  child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
-                                )
-                              : const Text('Create Account', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                      GestureDetector(
+                        onTap: () => Navigator.pop(context),
+                        child: Text(
+                          'Sign in',
+                          style: Theme.of(context)
+                              .textTheme
+                              .titleSmall
+                              ?.copyWith(color: AppTheme.accent),
                         ),
-                      );
-                    },
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 24),
-
-                  // Login link
-                  Center(
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Text('Already have an account? ', style: TextStyle(color: AppTheme.textSecondary)),
-                        GestureDetector(
-                          onTap: () => Navigator.pop(context),
-                          child: const Text('Sign In', style: TextStyle(color: AppTheme.primaryTeal, fontWeight: FontWeight.w600)),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ),
@@ -317,7 +330,55 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  Widget _buildLabel(String label) {
+  Widget _buildLabel(BuildContext context, String label) {
     return Text(label, style: Theme.of(context).textTheme.titleMedium);
+  }
+}
+
+class _RoleTile extends StatelessWidget {
+  const _RoleTile({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.selected,
+    required this.onTap,
+    this.accent = AppTheme.accent,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final bool selected;
+  final Color accent;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return FrostCard(
+      onTap: onTap,
+      padding: const EdgeInsets.all(16),
+      color: selected ? accent.withValues(alpha: 0.08) : AppTheme.surface,
+      borderColor: selected ? accent.withValues(alpha: 0.26) : AppTheme.divider,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          DecoratedBox(
+            decoration: BoxDecoration(
+              color: accent.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: SizedBox(
+              width: 42,
+              height: 42,
+              child: Icon(icon, color: accent, size: 20),
+            ),
+          ),
+          const SizedBox(height: 14),
+          Text(title, style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 4),
+          Text(subtitle, style: Theme.of(context).textTheme.bodyMedium),
+        ],
+      ),
+    );
   }
 }

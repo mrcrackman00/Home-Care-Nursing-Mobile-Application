@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../config/theme.dart';
+
+import '../../widgets/healthcare_ui.dart';
 
 class NurseProfileScreen extends StatelessWidget {
   const NurseProfileScreen({super.key});
@@ -7,10 +8,13 @@ class NurseProfileScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Nurse Profile')),
-      body: Container(
-        decoration: const BoxDecoration(gradient: AppTheme.darkGradient),
-        child: const Center(child: Text('Profile shown on home screen', style: TextStyle(color: AppTheme.textSecondary))),
+      body: HealthcareBackground(
+        child: const EmptyStateView(
+          icon: Icons.badge_outlined,
+          title: 'Profile lives on the nurse dashboard',
+          subtitle:
+              'The redesigned nurse profile and verification controls are now embedded on the main home experience.',
+        ),
       ),
     );
   }

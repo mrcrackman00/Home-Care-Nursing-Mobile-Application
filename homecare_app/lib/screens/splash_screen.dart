@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../config/theme.dart';
+
 import '../config/routes.dart';
+import '../config/theme.dart';
 import '../providers/auth_provider.dart';
+import '../widgets/healthcare_ui.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -13,47 +15,37 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen>
     with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _fadeAnimation;
-  late Animation<double> _scaleAnimation;
-  late Animation<Offset> _slideAnimation;
+  late final AnimationController _controller;
+  late final Animation<double> _fadeAnimation;
+  late final Animation<double> _floatAnimation;
 
   @override
   void initState() {
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 2000),
+      duration: const Duration(milliseconds: 2200),
+    )..repeat(reverse: true);
+
+    _fadeAnimation = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeInOut,
     );
 
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: const Interval(0.0, 0.5, curve: Curves.easeOut)),
+    _floatAnimation = Tween<double>(begin: -10, end: 10).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
     );
 
-    _scaleAnimation = Tween<double>(begin: 0.5, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: const Interval(0.0, 0.6, curve: Curves.elasticOut)),
-    );
-
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.3),
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(parent: _controller, curve: const Interval(0.3, 0.7, curve: Curves.easeOut)),
-    );
-
-    _controller.forward();
-
-    // Navigate after splash
-    Future.delayed(const Duration(seconds: 3), () {
-      _navigateToNextScreen();
-    });
+    Future.delayed(const Duration(seconds: 3), _navigateToNextScreen);
   }
 
   Future<void> _navigateToNextScreen() async {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     await authProvider.initialize();
 
-    if (!mounted) return;
+    if (!mounted) {
+      return;
+    }
 
     if (authProvider.isLoggedIn && authProvider.user != null) {
       if (authProvider.user!.role == 'nurse') {
@@ -61,9 +53,10 @@ class _SplashScreenState extends State<SplashScreen>
       } else {
         Navigator.pushReplacementNamed(context, AppRoutes.patientHome);
       }
-    } else {
-      Navigator.pushReplacementNamed(context, AppRoutes.login);
+      return;
     }
+
+    Navigator.pushReplacementNamed(context, AppRoutes.login);
   }
 
   @override
@@ -75,80 +68,156 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: AppTheme.darkGradient,
-        ),
-        child: Center(
-          child: AnimatedBuilder(
-            animation: _controller,
-            builder: (context, child) {
-              return Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // Logo
-                  FadeTransition(
-                    opacity: _fadeAnimation,
-                    child: ScaleTransition(
-                      scale: _scaleAnimation,
-                      child: Container(
-                        width: 120,
-                        height: 120,
-                        decoration: BoxDecoration(
-                          gradient: AppTheme.primaryGradient,
-                          borderRadius: BorderRadius.circular(30),
-                          boxShadow: AppTheme.elevatedShadow,
-                        ),
-                        child: const Icon(
-                          Icons.medical_services_rounded,
-                          size: 60,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  // App Name
-                  SlideTransition(
-                    position: _slideAnimation,
-                    child: FadeTransition(
-                      opacity: _fadeAnimation,
-                      child: Text(
-                        'HomeCare',
-                        style: Theme.of(context).textTheme.displayMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  FadeTransition(
-                    opacity: _fadeAnimation,
-                    child: Text(
-                      'Quality Nursing at Your Doorstep',
-                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                            color: AppTheme.textSecondary,
+      body: HealthcareBackground(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 16),
+              const StatusPill(
+                label: 'Premium Home Nursing',
+                color: AppTheme.accent,
+                icon: Icons.favorite_border_rounded,
+              ),
+              const Spacer(),
+              FadeTransition(
+                opacity: _fadeAnimation,
+                child: AnimatedBuilder(
+                  animation: _floatAnimation,
+                  builder: (context, child) {
+                    return Transform.translate(
+                      offset: Offset(0, _floatAnimation.value),
+                      child: child,
+                    );
+                  },
+                  child: FrostCard(
+                    padding: const EdgeInsets.all(28),
+                    borderRadius: BorderRadius.circular(28),
+                    gradient: AppTheme.primaryGradient,
+                    boxShadow: AppTheme.elevatedShadow,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(20),
                           ),
+                          child: const SizedBox(
+                            width: 88,
+                            height: 88,
+                            child: Icon(
+                              Icons.local_hospital_rounded,
+                              color: Colors.white,
+                              size: 40,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 28),
+                        Text(
+                          'NurseCare',
+                          style:
+                              Theme.of(context).textTheme.displayMedium?.copyWith(
+                                    color: Colors.white,
+                                  ),
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          'Book nearby nurses in real time, track visits live, and manage premium home care from one trusted platform.',
+                          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                color: Colors.white.withValues(alpha: 0.76),
+                              ),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 48),
-                  FadeTransition(
-                    opacity: _fadeAnimation,
-                    child: const SizedBox(
-                      width: 32,
-                      height: 32,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 3,
-                        color: AppTheme.primaryTeal,
-                      ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: const [
+                  Expanded(
+                    child: _SplashTrustTile(
+                      icon: Icons.location_searching_rounded,
+                      title: 'Live tracking',
+                    ),
+                  ),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: _SplashTrustTile(
+                      icon: Icons.verified_user_outlined,
+                      title: 'Verified care',
+                    ),
+                  ),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: _SplashTrustTile(
+                      icon: Icons.payments_outlined,
+                      title: 'Transparent pay',
                     ),
                   ),
                 ],
-              );
-            },
+              ),
+              const Spacer(),
+              Center(
+                child: Column(
+                  children: [
+                    const SizedBox(
+                      width: 28,
+                      height: 28,
+                      child: CircularProgressIndicator(strokeWidth: 2.8),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Preparing your care network',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _SplashTrustTile extends StatelessWidget {
+  const _SplashTrustTile({
+    required this.icon,
+    required this.title,
+  });
+
+  final IconData icon;
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    return FrostCard(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 18),
+      child: Column(
+        children: [
+          DecoratedBox(
+            decoration: BoxDecoration(
+              color: AppTheme.accentLight,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: SizedBox(
+              width: 42,
+              height: 42,
+              child: Icon(icon, color: AppTheme.accent, size: 20),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.labelMedium,
+          ),
+        ],
       ),
     );
   }

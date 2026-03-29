@@ -55,7 +55,6 @@ class UserModel {
       'phone': phone,
       'role': role,
       'profileImage': profileImage,
-      'fcmToken': fcmToken,
       'createdAt': Timestamp.fromDate(createdAt),
     };
     
@@ -73,7 +72,6 @@ class UserModel {
       map['specializations'] = specializations ?? [];
       map['experience'] = experience ?? '';
       map['verified'] = verified ?? false;
-      map['bankDetails'] = bankDetails ?? {};
     }
     
     return map;

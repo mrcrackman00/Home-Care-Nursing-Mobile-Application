@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import '../../config/theme.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/earning_provider.dart';
+import '../../widgets/healthcare_ui.dart';
 
 class WithdrawalScreen extends StatefulWidget {
   const WithdrawalScreen({super.key});
-
   @override
   State<WithdrawalScreen> createState() => _WithdrawalScreenState();
 }
@@ -32,156 +33,220 @@ class _WithdrawalScreenState extends State<WithdrawalScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(gradient: AppTheme.darkGradient),
-        child: SafeArea(
+      body: HealthcareBackground(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  children: [
-                    IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.arrow_back_ios, color: Colors.white)),
-                    const Text('Withdraw Money', style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
-                  ],
-                ),
+              Row(
+                children: [
+                  TopGlassButton(
+                    icon: Icons.arrow_back_ios_new_rounded,
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: SectionHeading(
+                      title: 'Withdraw earnings',
+                      subtitle:
+                          'Move your available balance to your bank account or UPI destination securely.',
+                    ),
+                  ),
+                ],
               ),
+              const SizedBox(height: 20),
               Expanded(
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  padding: const EdgeInsets.only(bottom: 28),
                   child: Consumer<EarningProvider>(
-                    builder: (context, earningProvider, _) {
-                      final balance = earningProvider.earnings?.withdrawableBalance ?? 0;
+                    builder: (context, provider, _) {
+                      final balance = provider.earnings?.withdrawableBalance ?? 0;
                       return Form(
                         key: _formKey,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // Balance Card
-                            Container(
-                              width: double.infinity,
+                            FrostCard(
                               padding: const EdgeInsets.all(24),
-                              decoration: BoxDecoration(
-                                gradient: AppTheme.primaryGradient,
-                                borderRadius: BorderRadius.circular(20),
-                              ),
+                              borderRadius: BorderRadius.circular(20),
+                              gradient: AppTheme.primaryGradient,
+                              boxShadow: AppTheme.elevatedShadow,
                               child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text('Available Balance', style: TextStyle(color: Colors.white70, fontSize: 14)),
+                                  const StatusPill(
+                                    label: 'Withdrawable Balance',
+                                    color: Colors.white,
+                                  ),
+                                  const SizedBox(height: 18),
+                                  AnimatedAmountText(
+                                    amount: balance,
+                                    size: 38,
+                                    color: Colors.white,
+                                  ),
                                   const SizedBox(height: 8),
-                                  Text('₹${balance.toStringAsFixed(0)}', style: const TextStyle(color: Colors.white, fontSize: 40, fontWeight: FontWeight.bold)),
+                                  Text(
+                                    'Completed jobs settle here automatically once the backend marks them available for payout.',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodyMedium
+                                        ?.copyWith(
+                                          color: Colors.white.withValues(alpha: 0.72),
+                                        ),
+                                  ),
                                 ],
                               ),
                             ),
-                            const SizedBox(height: 24),
-
-                            // Amount
-                            const Text('Withdrawal Amount', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600)),
-                            const SizedBox(height: 8),
-                            TextFormField(
-                              controller: _amountController,
-                              keyboardType: TextInputType.number,
-                              style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
-                              decoration: const InputDecoration(
-                                prefixText: '₹ ',
-                                prefixStyle: TextStyle(color: AppTheme.primaryTeal, fontSize: 24, fontWeight: FontWeight.bold),
-                                hintText: '0',
-                              ),
-                              validator: (v) {
-                                if (v == null || v.isEmpty) return 'Enter amount';
-                                final amount = double.tryParse(v);
-                                if (amount == null || amount <= 0) return 'Invalid amount';
-                                if (amount > balance) return 'Insufficient balance';
-                                return null;
-                              },
-                            ),
-                            // Quick amounts
-                            const SizedBox(height: 12),
-                            Row(
-                              children: [500.0, 1000.0, 2000.0, 5000.0].map((amount) {
-                                return Padding(
-                                  padding: const EdgeInsets.only(right: 8),
-                                  child: GestureDetector(
-                                    onTap: () {
-                                      if (amount <= balance) {
-                                        _amountController.text = amount.toStringAsFixed(0);
+                            const SizedBox(height: 16),
+                            AppSectionCard(
+                              title: 'Withdrawal amount',
+                              subtitle:
+                                  'Pick a quick amount or enter a custom value.',
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  TextFormField(
+                                    controller: _amountController,
+                                    keyboardType: TextInputType.number,
+                                    decoration: const InputDecoration(
+                                      prefixText: '₹ ',
+                                      hintText: '0',
+                                    ),
+                                    validator: (value) {
+                                      if (value == null || value.isEmpty) {
+                                        return 'Enter amount';
                                       }
+                                      final amount = double.tryParse(value);
+                                      if (amount == null || amount <= 0) {
+                                        return 'Invalid amount';
+                                      }
+                                      if (amount > balance) {
+                                        return 'Insufficient balance';
+                                      }
+                                      return null;
                                     },
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                      decoration: BoxDecoration(
-                                        color: amount <= balance ? AppTheme.bgCard : AppTheme.bgCardLight.withValues(alpha: 0.5),
-                                        borderRadius: BorderRadius.circular(20),
-                                        border: Border.all(color: AppTheme.bgCardLight),
-                                      ),
-                                      child: Text(
-                                        '₹${amount.toStringAsFixed(0)}',
-                                        style: TextStyle(
-                                          color: amount <= balance ? Colors.white : AppTheme.textMuted,
-                                          fontWeight: FontWeight.w500,
+                                  ),
+                                  const SizedBox(height: 14),
+                                  Wrap(
+                                    spacing: 8,
+                                    runSpacing: 8,
+                                    children: [500.0, 1000.0, 2000.0, 5000.0]
+                                        .map(
+                                          (amount) => _AmountChip(
+                                            label: '₹${amount.toStringAsFixed(0)}',
+                                            enabled: amount <= balance,
+                                            onTap: () {
+                                              if (amount <= balance) {
+                                                _amountController.text =
+                                                    amount.toStringAsFixed(0);
+                                              }
+                                            },
+                                          ),
+                                        )
+                                        .toList(),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            AppSectionCard(
+                              title: 'Bank account details',
+                              subtitle:
+                                  'Add bank details or use a UPI destination for payout.',
+                              child: Column(
+                                children: [
+                                  _field(
+                                    _accountHolderController,
+                                    'Account holder name',
+                                    Icons.person_outline_rounded,
+                                  ),
+                                  const SizedBox(height: 12),
+                                  _field(
+                                    _accountNumberController,
+                                    'Account number',
+                                    Icons.account_balance_outlined,
+                                  ),
+                                  const SizedBox(height: 12),
+                                  _field(
+                                    _ifscController,
+                                    'IFSC code',
+                                    Icons.qr_code_scanner_outlined,
+                                  ),
+                                  const SizedBox(height: 18),
+                                  Row(
+                                    children: [
+                                      const Expanded(child: Divider()),
+                                      Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 12,
+                                        ),
+                                        child: Text(
+                                          'or withdraw via UPI',
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .labelSmall,
                                         ),
                                       ),
-                                    ),
+                                      const Expanded(child: Divider()),
+                                    ],
                                   ),
-                                );
-                              }).toList(),
+                                  const SizedBox(height: 18),
+                                  _field(
+                                    _upiIdController,
+                                    'UPI ID (example@upi)',
+                                    Icons.account_balance_wallet_outlined,
+                                  ),
+                                ],
+                              ),
                             ),
-                            const SizedBox(height: 32),
-
-                            // Bank Details
-                            const Text('Bank Details', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600)),
-                            const SizedBox(height: 12),
-                            _buildField(_accountHolderController, 'Account Holder Name', Icons.person),
-                            const SizedBox(height: 12),
-                            _buildField(_accountNumberController, 'Account Number', Icons.account_balance),
-                            const SizedBox(height: 12),
-                            _buildField(_ifscController, 'IFSC Code', Icons.code),
-                            const SizedBox(height: 24),
-
-                            // Or UPI
-                            Row(
-                              children: [
-                                Expanded(child: Divider(color: AppTheme.textMuted.withValues(alpha: 0.3))),
-                                const Padding(
-                                  padding: EdgeInsets.symmetric(horizontal: 16),
-                                  child: Text('or', style: TextStyle(color: AppTheme.textMuted)),
+                            if (provider.error != null) ...[
+                              const SizedBox(height: 14),
+                              FrostCard(
+                                padding: const EdgeInsets.all(14),
+                                color: const Color(0xFFFFF3F6),
+                                borderColor: AppTheme.error.withValues(alpha: 0.15),
+                                child: Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.error_outline_rounded,
+                                      color: AppTheme.error,
+                                      size: 18,
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Text(
+                                        provider.error!,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodyMedium
+                                            ?.copyWith(color: AppTheme.error),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                Expanded(child: Divider(color: AppTheme.textMuted.withValues(alpha: 0.3))),
-                              ],
-                            ),
-                            const SizedBox(height: 16),
-                            _buildField(_upiIdController, 'UPI ID (e.g. name@upi)', Icons.qr_code),
-                            const SizedBox(height: 32),
-
-                            // Withdraw Button
-                            SizedBox(
-                              width: double.infinity,
-                              height: 56,
+                              ),
+                            ],
+                            const SizedBox(height: 20),
+                            TapScale(
+                              onTap: provider.isLoading ? null : _withdraw,
                               child: ElevatedButton(
-                                onPressed: earningProvider.isLoading ? null : _withdraw,
+                                onPressed: provider.isLoading ? null : _withdraw,
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: AppTheme.success,
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                                 ),
-                                child: earningProvider.isLoading
-                                    ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
-                                    : const Text('Withdraw Money', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                                child: provider.isLoading
+                                    ? const SizedBox(
+                                        width: 22,
+                                        height: 22,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2.4,
+                                          color: Colors.white,
+                                        ),
+                                      )
+                                    : const Text('Withdraw money'),
                               ),
                             ),
-                            const SizedBox(height: 16),
-
-                            // Error
-                            if (earningProvider.error != null)
-                              Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: AppTheme.error.withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(earningProvider.error!, style: const TextStyle(color: AppTheme.error)),
-                              ),
-                            const SizedBox(height: 32),
                           ],
                         ),
                       );
@@ -196,31 +261,35 @@ class _WithdrawalScreenState extends State<WithdrawalScreen> {
     );
   }
 
-  Widget _buildField(TextEditingController controller, String hint, IconData icon) {
+  Widget _field(
+    TextEditingController controller,
+    String hint,
+    IconData icon,
+  ) {
     return TextFormField(
       controller: controller,
-      style: const TextStyle(color: Colors.white),
       decoration: InputDecoration(
         hintText: hint,
-        prefixIcon: Icon(icon, color: AppTheme.primaryTeal),
+        prefixIcon: Icon(icon),
       ),
     );
   }
 
   Future<void> _withdraw() async {
-    if (!_formKey.currentState!.validate()) return;
-
-    // Validate bank details
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
     if (_accountNumberController.text.isEmpty && _upiIdController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter bank details or UPI ID')),
+        const SnackBar(
+          content: Text('Please enter bank details or a UPI ID'),
+        ),
       );
       return;
     }
 
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final earningProvider = Provider.of<EarningProvider>(context, listen: false);
-
     final success = await earningProvider.requestWithdrawal(
       nurseId: authProvider.user!.uid,
       amount: double.parse(_amountController.text),
@@ -236,43 +305,51 @@ class _WithdrawalScreenState extends State<WithdrawalScreen> {
       showDialog(
         context: context,
         builder: (ctx) => AlertDialog(
-          backgroundColor: AppTheme.bgCard,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 64, height: 64,
-                decoration: BoxDecoration(
-                  color: AppTheme.success.withValues(alpha: 0.15),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.check_circle, color: AppTheme.success, size: 40),
-              ),
-              const SizedBox(height: 16),
-              const Text('Withdrawal Requested!', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 8),
-              Text(
-                'Your withdrawal of ₹${_amountController.text} has been initiated. It will be processed within 24-48 hours.',
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: AppTheme.textSecondary),
-              ),
-            ],
+          title: const Text('Withdrawal Requested'),
+          content: Text(
+            'Your withdrawal of ₹${_amountController.text} has been initiated. We will process it when the payout workflow runs.',
+            style: Theme.of(context).textTheme.bodyMedium,
           ),
           actions: [
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(ctx);
-                  Navigator.pop(context);
-                },
-                child: const Text('Done'),
-              ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(ctx);
+                Navigator.pop(context);
+              },
+              child: const Text('Done'),
             ),
           ],
         ),
       );
     }
+  }
+}
+
+class _AmountChip extends StatelessWidget {
+  const _AmountChip({
+    required this.label,
+    required this.enabled,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool enabled;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return FrostCard(
+      onTap: enabled ? onTap : null,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      color: enabled ? AppTheme.background : AppTheme.divider.withValues(alpha: 0.4),
+      borderColor: enabled ? AppTheme.divider : Colors.transparent,
+      borderRadius: BorderRadius.circular(22),
+      child: Text(
+        label,
+        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+              color: enabled ? AppTheme.textPrimary : AppTheme.textDisabled,
+            ),
+      ),
+    );
   }
 }

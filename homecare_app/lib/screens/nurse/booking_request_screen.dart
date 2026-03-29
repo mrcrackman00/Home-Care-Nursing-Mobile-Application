@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../config/theme.dart';
+
+import '../../widgets/healthcare_ui.dart';
 
 class BookingRequestScreen extends StatelessWidget {
   const BookingRequestScreen({super.key});
@@ -7,10 +8,13 @@ class BookingRequestScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Booking Request')),
-      body: Container(
-        decoration: const BoxDecoration(gradient: AppTheme.darkGradient),
-        child: const Center(child: Text('Request details shown inline on home screen', style: TextStyle(color: AppTheme.textSecondary))),
+      body: HealthcareBackground(
+        child: const EmptyStateView(
+          icon: Icons.notifications_active_outlined,
+          title: 'Requests live on the nurse home tab',
+          subtitle:
+              'Incoming patient requests are now presented directly inside the redesigned nurse dashboard for faster decisions.',
+        ),
       ),
     );
   }

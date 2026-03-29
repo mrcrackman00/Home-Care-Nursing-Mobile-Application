@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../config/theme.dart';
+
+import '../../widgets/healthcare_ui.dart';
 
 class PatientProfileScreen extends StatelessWidget {
   const PatientProfileScreen({super.key});
@@ -7,10 +8,13 @@ class PatientProfileScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('My Profile')),
-      body: Container(
-        decoration: const BoxDecoration(gradient: AppTheme.darkGradient),
-        child: const Center(child: Text('Profile Screen', style: TextStyle(color: Colors.white))),
+      body: HealthcareBackground(
+        child: const EmptyStateView(
+          icon: Icons.person_outline_rounded,
+          title: 'Profile lives on the home tab',
+          subtitle:
+              'The redesigned patient profile is available directly inside the bottom navigation experience.',
+        ),
       ),
     );
   }

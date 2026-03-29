@@ -1,8 +1,235 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isSelf(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function currentUserDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function isAdmin() {
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        currentUserDoc().data.role == 'admin';
+    }
+
+    function isPatient() {
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        currentUserDoc().data.role == 'patient';
+    }
+
+    function isNurse() {
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        currentUserDoc().data.role == 'nurse';
+    }
+
+    function changedKeysOnly(allowedKeys) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(allowedKeys);
+    }
+
+    function isBookingParticipant(bookingId) {
+      return isAdmin() || (
+        isSignedIn() &&
+        exists(/databases/$(database)/documents/bookings/$(bookingId)) &&
+        (
+          get(/databases/$(database)/documents/bookings/$(bookingId)).data.patientId == request.auth.uid ||
+          get(/databases/$(database)/documents/bookings/$(bookingId)).data.nurseId == request.auth.uid
+        )
+      );
+    }
+
+    function isChatParticipant(threadId) {
+      return isAdmin() || (
+        isSignedIn() &&
+        exists(/databases/$(database)/documents/chatThreads/$(threadId)) &&
+        request.auth.uid in get(/databases/$(database)/documents/chatThreads/$(threadId)).data.participantIds
+      );
+    }
+
+    function validPatientBookingCreate() {
+      return isPatient() &&
+        request.resource.data.patientId == request.auth.uid &&
+        request.resource.data.nurseId == null &&
+        request.resource.data.status == 'pending';
+    }
+
+    function validPatientCancel() {
+      return resource.data.patientId == request.auth.uid &&
+        resource.data.status in ['pending', 'accepted'] &&
+        request.resource.data.status == 'cancelled' &&
+        request.resource.data.nurseId == resource.data.nurseId &&
+        changedKeysOnly(['status', 'cancellationReason', 'cancelledAt', 'updatedAt']);
+    }
+
+    function validPatientComplete() {
+      return resource.data.patientId == request.auth.uid &&
+        resource.data.status == 'in_progress' &&
+        request.resource.data.status == 'completed' &&
+        request.resource.data.nurseId == resource.data.nurseId &&
+        changedKeysOnly(['status', 'completedAt', 'paymentStatus', 'updatedAt']);
+    }
+
+    function validPatientRating() {
+      return resource.data.patientId == request.auth.uid &&
+        resource.data.status == 'completed' &&
+        resource.data.rating == null &&
+        request.resource.data.status == resource.data.status &&
+        request.resource.data.nurseId == resource.data.nurseId &&
+        request.resource.data.patientId == resource.data.patientId &&
+        changedKeysOnly(['rating', 'feedback', 'ratedAt', 'updatedAt']);
+    }
+
+    function validNurseAccept() {
+      return isNurse() &&
+        resource.data.status == 'pending' &&
+        resource.data.nurseId == null &&
+        request.resource.data.status == 'accepted' &&
+        request.resource.data.nurseId == request.auth.uid &&
+        changedKeysOnly([
+          'nurseId',
+          'nurseName',
+          'status',
+          'acceptedAt',
+          'dispatchState',
+          'offeredNurseId',
+          'chatThreadId',
+          'updatedAt'
+        ]);
+    }
+
+    function validNurseStart() {
+      return isNurse() &&
+        resource.data.nurseId == request.auth.uid &&
+        resource.data.status == 'accepted' &&
+        request.resource.data.status == 'in_progress' &&
+        changedKeysOnly(['status', 'startedAt', 'updatedAt']);
+    }
+
+    match /users/{uid} {
+      allow read: if isAdmin() || isSelf(uid) || (isSignedIn() && resource.data.role == 'nurse');
+      allow create: if isAdmin() || (
+        isSelf(uid) &&
+        request.resource.data.uid == request.auth.uid &&
+        request.resource.data.role in ['patient', 'nurse']
+      );
+      allow update: if isAdmin() || (
+        isSelf(uid) &&
+        request.resource.data.uid == resource.data.uid &&
+        request.resource.data.role == resource.data.role &&
+        request.resource.data.createdAt == resource.data.createdAt &&
+        changedKeysOnly([
+          'name',
+          'email',
+          'phone',
+          'profileImage',
+          'address',
+          'location',
+          'isOnline',
+          'isAvailable',
+          'currentLocation',
+          'specializations',
+          'experience',
+          'updatedAt'
+        ])
+      );
+      allow delete: if isAdmin();
+    }
+
+    match /user_private/{uid} {
+      allow read: if isAdmin() || isSelf(uid);
+      allow create: if isAdmin() || isSelf(uid);
+      allow update: if isAdmin() || (
+        isSelf(uid) &&
+        request.resource.data.uid == resource.data.uid &&
+        request.resource.data.role == resource.data.role &&
+        changedKeysOnly(['email', 'phone', 'fcmTokens', 'bankDetails', 'updatedAt'])
+      );
+      allow delete: if isAdmin();
+    }
+
+    match /bookings/{bookingId} {
+      allow read: if isAdmin() || (
+        isSignedIn() &&
+        (resource.data.patientId == request.auth.uid || resource.data.nurseId == request.auth.uid)
+      );
+      allow create: if validPatientBookingCreate();
+      allow update: if isAdmin() || validPatientCancel() || validPatientComplete() ||
+        validPatientRating() || validNurseAccept() || validNurseStart();
+      allow delete: if isAdmin();
+    }
+
+    match /booking_requests/{requestId} {
+      allow read: if isAdmin() || (isSignedIn() && resource.data.nurseId == request.auth.uid);
+      allow create: if false;
+      allow update: if isAdmin() || (
+        isSignedIn() &&
+        resource.data.nurseId == request.auth.uid &&
+        resource.data.status == 'pending' &&
+        request.resource.data.nurseId == resource.data.nurseId &&
+        request.resource.data.bookingId == resource.data.bookingId &&
+        request.resource.data.status in ['accepted', 'rejected'] &&
+        changedKeysOnly(['status', 'respondedAt', 'updatedAt'])
+      );
+      allow delete: if isAdmin();
+    }
+
+    match /earnings/{nurseId} {
+      allow read: if isAdmin() || isSelf(nurseId);
+      allow write: if false;
+
+      match /transactions/{transactionId} {
+        allow read: if isAdmin() || isSelf(nurseId);
+        allow write: if false;
+      }
+    }
+
+    match /payments/{paymentId} {
+      allow read: if isAdmin() || (
+        isSignedIn() &&
+        (resource.data.patientId == request.auth.uid || resource.data.nurseId == request.auth.uid)
+      );
+      allow write: if false;
+    }
+
+    match /withdrawals/{withdrawalId} {
+      allow read: if isAdmin() || (isSignedIn() && resource.data.nurseId == request.auth.uid);
+      allow create: if isNurse() &&
+        request.resource.data.nurseId == request.auth.uid &&
+        request.resource.data.status == 'pending';
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /transactions/{transactionId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    match /chatThreads/{threadId} {
+      allow read: if isChatParticipant(threadId) || isBookingParticipant(threadId);
+      allow write: if isAdmin();
+
+      match /messages/{messageId} {
+        allow read: if isChatParticipant(threadId);
+        allow create: if isChatParticipant(threadId) &&
+          request.resource.data.senderId == request.auth.uid &&
+          request.resource.data.threadId == threadId &&
+          request.resource.data.bookingId ==
+            get(/databases/$(database)/documents/chatThreads/$(threadId)).data.bookingId;
+        allow update, delete: if false;
+      }
+    }
+
     match /{document=**} {
-      allow read, write: if request.auth != null;
+      allow read, write: if false;
     }
   }
 }

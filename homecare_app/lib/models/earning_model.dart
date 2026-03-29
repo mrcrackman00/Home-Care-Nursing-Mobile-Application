@@ -5,6 +5,7 @@ class EarningModel {
   final double totalEarnings;
   final double withdrawableBalance;
   final double totalWithdrawn;
+  final double pendingWithdrawalBalance;
   final int totalJobs;
 
   EarningModel({
@@ -12,6 +13,7 @@ class EarningModel {
     this.totalEarnings = 0,
     this.withdrawableBalance = 0,
     this.totalWithdrawn = 0,
+    this.pendingWithdrawalBalance = 0,
     this.totalJobs = 0,
   });
 
@@ -21,6 +23,7 @@ class EarningModel {
       'totalEarnings': totalEarnings,
       'withdrawableBalance': withdrawableBalance,
       'totalWithdrawn': totalWithdrawn,
+      'pendingWithdrawalBalance': pendingWithdrawalBalance,
       'totalJobs': totalJobs,
     };
   }
@@ -31,6 +34,8 @@ class EarningModel {
       totalEarnings: (map['totalEarnings'] as num?)?.toDouble() ?? 0,
       withdrawableBalance: (map['withdrawableBalance'] as num?)?.toDouble() ?? 0,
       totalWithdrawn: (map['totalWithdrawn'] as num?)?.toDouble() ?? 0,
+      pendingWithdrawalBalance:
+          (map['pendingWithdrawalBalance'] as num?)?.toDouble() ?? 0,
       totalJobs: map['totalJobs'] as int? ?? 0,
     );
   }

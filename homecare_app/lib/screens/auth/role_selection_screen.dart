@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
-import '../../config/theme.dart';
+
 import '../../config/routes.dart';
+import '../../config/theme.dart';
+import '../../widgets/healthcare_ui.dart';
 
 class RoleSelectionScreen extends StatelessWidget {
   const RoleSelectionScreen({super.key});
@@ -8,45 +10,75 @@ class RoleSelectionScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(gradient: AppTheme.darkGradient),
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    gradient: AppTheme.primaryGradient,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: const Icon(Icons.medical_services_rounded, size: 40, color: Colors.white),
+      body: HealthcareBackground(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            children: [
+              const Spacer(),
+              FrostCard(
+                padding: const EdgeInsets.all(28),
+                borderRadius: BorderRadius.circular(28),
+                gradient: AppTheme.primaryGradient,
+                boxShadow: AppTheme.elevatedShadow,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: const SizedBox(
+                        width: 84,
+                        height: 84,
+                        child: Icon(
+                          Icons.medical_services_rounded,
+                          size: 38,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 22),
+                    Text(
+                      'Choose your role',
+                      style: Theme.of(context)
+                          .textTheme
+                          .displaySmall
+                          ?.copyWith(color: Colors.white),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      'Switch between a premium patient experience and a powerful nurse operations dashboard.',
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                            color: Colors.white.withValues(alpha: 0.76),
+                          ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 24),
-                Text('HomeCare', style: Theme.of(context).textTheme.displaySmall),
-                const SizedBox(height: 8),
-                const Text('Choose your role', style: TextStyle(color: AppTheme.textSecondary, fontSize: 16)),
-                const SizedBox(height: 48),
-                _RoleCard(
-                  icon: Icons.person_rounded,
-                  title: 'Patient',
-                  subtitle: 'Book nurses for home care',
-                  gradient: AppTheme.primaryGradient,
-                  onTap: () => Navigator.pushReplacementNamed(context, AppRoutes.patientHome),
-                ),
-                const SizedBox(height: 16),
-                _RoleCard(
-                  icon: Icons.medical_services_rounded,
-                  title: 'Nurse',
-                  subtitle: 'Accept care requests & earn',
-                  gradient: AppTheme.goldGradient,
-                  onTap: () => Navigator.pushReplacementNamed(context, AppRoutes.nurseHome),
-                ),
-              ],
-            ),
+              ),
+              const SizedBox(height: 24),
+              _RoleCard(
+                icon: Icons.person_rounded,
+                title: 'Patient App',
+                subtitle: 'Book nearby nurses and manage live care visits',
+                accent: AppTheme.accent,
+                onTap: () {
+                  Navigator.pushReplacementNamed(context, AppRoutes.patientHome);
+                },
+              ),
+              const SizedBox(height: 16),
+              _RoleCard(
+                icon: Icons.local_hospital_rounded,
+                title: 'Nurse App',
+                subtitle: 'Accept requests, navigate live, and track earnings',
+                accent: AppTheme.success,
+                onTap: () {
+                  Navigator.pushReplacementNamed(context, AppRoutes.nurseHome);
+                },
+              ),
+              const Spacer(),
+            ],
           ),
         ),
       ),
@@ -55,56 +87,56 @@ class RoleSelectionScreen extends StatelessWidget {
 }
 
 class _RoleCard extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final Gradient gradient;
-  final VoidCallback onTap;
-
   const _RoleCard({
     required this.icon,
     required this.title,
     required this.subtitle,
-    required this.gradient,
+    required this.accent,
     required this.onTap,
   });
 
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final Color accent;
+  final VoidCallback onTap;
+
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return FrostCard(
       onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          color: AppTheme.bgCard,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: AppTheme.bgCardLight),
-        ),
-        child: Row(
-          children: [
-            Container(
+      padding: const EdgeInsets.all(20),
+      borderRadius: BorderRadius.circular(20),
+      child: Row(
+        children: [
+          DecoratedBox(
+            decoration: BoxDecoration(
+              color: accent.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: SizedBox(
               width: 56,
               height: 56,
-              decoration: BoxDecoration(
-                gradient: gradient,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Icon(icon, color: Colors.white, size: 28),
+              child: Icon(icon, color: accent, size: 28),
             ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600)),
-                  const SizedBox(height: 4),
-                  Text(subtitle, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 14)),
-                ],
-              ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: Theme.of(context).textTheme.titleLarge),
+                const SizedBox(height: 4),
+                Text(subtitle, style: Theme.of(context).textTheme.bodyMedium),
+              ],
             ),
-            const Icon(Icons.arrow_forward_ios, color: AppTheme.textMuted, size: 18),
-          ],
-        ),
+          ),
+          const Icon(
+            Icons.arrow_forward_ios_rounded,
+            color: AppTheme.textDisabled,
+            size: 18,
+          ),
+        ],
       ),
     );
   }

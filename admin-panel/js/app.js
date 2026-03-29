@@ -1,18 +1,70 @@
-// ====== PAGE NAVIGATION ======
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+import {
+  getAuth,
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
+  signOut,
+} from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+import {
+  collection,
+  doc,
+  getDoc,
+  getFirestore,
+  onSnapshot,
+  query,
+  where,
+} from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+const firebaseConfig = {
+  apiKey: 'AIzaSyBOatncA5uBoI2XCv-9fVTnsim_l2zIzK0',
+  authDomain: 'home-care-nursing-e733e.firebaseapp.com',
+  projectId: 'home-care-nursing-e733e',
+  storageBucket: 'home-care-nursing-e733e.firebasestorage.app',
+  messagingSenderId: '1069702495258',
+  appId: '1:1069702495258:web:e651e83ad9d7901a1825a3',
+  measurementId: 'G-B2RR7NXH4R',
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+const state = {
+  patients: [],
+  nurses: [],
+  bookings: [],
+  payments: [],
+  withdrawals: [],
+};
+
+const unsubscribers = [];
+
+const loginShell = document.getElementById('admin-login-shell');
+const adminApp = document.getElementById('admin-app');
+const loginForm = document.getElementById('admin-login-form');
+const loginButton = document.getElementById('admin-login-button');
+const loginError = document.getElementById('admin-login-error');
+const signoutButton = document.getElementById('admin-signout');
+const adminName = document.getElementById('admin-name');
+const adminAvatar = document.getElementById('admin-avatar');
+const adminStatus = document.getElementById('admin-status');
+const bookingFilter = document.getElementById('booking-filter');
+const searchUsersInput = document.getElementById('search-users');
+const searchNursesInput = document.getElementById('search-nurses');
+
 function showPage(pageId) {
-  // Hide all pages
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  
-  // Show selected page
+  document.querySelectorAll('.page').forEach((page) => page.classList.remove('active'));
   const page = document.getElementById(`page-${pageId}`);
-  if (page) page.classList.add('active');
+  if (page) {
+    page.classList.add('active');
+  }
 
-  // Update nav
-  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach((item) => item.classList.remove('active'));
   const navItem = document.querySelector(`.nav-item[data-page="${pageId}"]`);
-  if (navItem) navItem.classList.add('active');
+  if (navItem) {
+    navItem.classList.add('active');
+  }
 
-  // Update title
   const titles = {
     dashboard: 'Dashboard',
     users: 'Users Management',
@@ -24,98 +76,381 @@ function showPage(pageId) {
     analytics: 'Analytics',
   };
   document.getElementById('page-title').textContent = titles[pageId] || pageId;
-
-  // Close sidebar on mobile
   document.getElementById('sidebar').classList.remove('open');
 }
 
-// ====== SIDEBAR TOGGLE ======
 function toggleSidebar() {
   document.getElementById('sidebar').classList.toggle('open');
 }
 
-// ====== DEMO DATA ======
-// ====== DEMO DATA (REMOVED) ======
-// This has been updated to use live Firebase data below
+window.showPage = showPage;
+window.toggleSidebar = toggleSidebar;
 
-function loadDemoData() {
-  // Obsolete: Replaced by loadFirebaseData()
-}
-
-function animateCounter(id, target) {
-  const el = document.getElementById(id);
-  let current = 0;
-  const step = Math.ceil(target / 30);
-  const interval = setInterval(() => {
-    current += step;
-    if (current >= target) {
-      current = target;
-      clearInterval(interval);
-    }
-    el.textContent = current.toLocaleString('en-IN');
-  }, 30);
-}
-
-// ====== FIREBASE INTEGRATION ======
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-import { getFirestore, collection, getDocs, query, where, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
-
-const firebaseConfig = {
-  apiKey: 'AIzaSyBOatncA5uBoI2XCv-9fVTnsim_l2zIzK0',
-  authDomain: 'home-care-nursing-e733e.firebaseapp.com',
-  projectId: 'home-care-nursing-e733e',
-  storageBucket: 'home-care-nursing-e733e.firebasestorage.app',
-  messagingSenderId: '1069702495258',
-  appId: '1:1069702495258:web:e651e83ad9d7901a1825a3',
-  measurementId: 'G-B2RR7NXH4R'
-};
-
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-
-async function loadFirebaseData() {
-  // Load patients
-  const usersSnap = await getDocs(query(collection(db, 'users'), where('role', '==', 'patient')));
-  document.getElementById('stat-patients').textContent = usersSnap.size;
-
-  // Load nurses
-  const nursesSnap = await getDocs(query(collection(db, 'users'), where('role', '==', 'nurse')));
-  document.getElementById('stat-nurses').textContent = nursesSnap.size;
-
-  // Load bookings
-  const bookingsSnap = await getDocs(collection(db, 'bookings'));
-  document.getElementById('stat-bookings').textContent = bookingsSnap.size;
-  
-  const completedSnap = await getDocs(query(collection(db, 'bookings'), where('status', '==', 'completed')));
-  document.getElementById('stat-completed').textContent = completedSnap.size;
-
-  // Load payments
-  const paymentsSnap = await getDocs(collection(db, 'payments'));
-  let totalRevenue = 0, totalCommission = 0;
-  paymentsSnap.forEach(doc => {
-    totalRevenue += doc.data().amount || 0;
-    totalCommission += doc.data().commission || 0;
-  });
-  document.getElementById('stat-revenue').textContent = `₹${totalRevenue.toLocaleString('en-IN')}`;
-  document.getElementById('stat-commission').textContent = `₹${totalCommission.toLocaleString('en-IN')}`;
-
-  // Update Analytics fields too if present
-  if (document.getElementById('analytics-revenue')) {
-    document.getElementById('analytics-revenue').textContent = `₹${totalRevenue.toLocaleString('en-IN')}`;
-    document.getElementById('analytics-profit').textContent = `₹${totalCommission.toLocaleString('en-IN')}`;
-    document.getElementById('analytics-users').textContent = (usersSnap.size + nursesSnap.size).toString();
+function clearSubscriptions() {
+  while (unsubscribers.length) {
+    const unsubscribe = unsubscribers.pop();
+    unsubscribe?.();
   }
 }
 
-// ====== INIT ======
-document.addEventListener('DOMContentLoaded', () => {
-  // Use Live Data from Firebase Toolkit
+function toDate(value) {
+  if (!value) {
+    return null;
+  }
+  if (typeof value.toDate === 'function') {
+    return value.toDate();
+  }
+  if (typeof value.seconds === 'number') {
+    return new Date(value.seconds * 1000);
+  }
+  return new Date(value);
+}
+
+function formatCurrency(amount) {
+  const value = Number(amount || 0);
+  return `₹${value.toLocaleString('en-IN', {
+    maximumFractionDigits: 0,
+  })}`;
+}
+
+function formatDate(value) {
+  const date = toDate(value);
+  if (!date) {
+    return 'Just now';
+  }
+
+  return new Intl.DateTimeFormat('en-IN', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(date);
+}
+
+function escapeHtml(value = '') {
+  return String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
+}
+
+function setAuthenticatedView(enabled) {
+  loginShell.classList.toggle('hidden', enabled);
+  adminApp.classList.toggle('hidden', !enabled);
+}
+
+function renderStats() {
+  const totalRevenue = state.payments.reduce(
+    (sum, item) => sum + Number(item.amount || 0),
+    0,
+  );
+  const totalCommission = state.payments.reduce(
+    (sum, item) => sum + Number(item.platformCommission || item.commission || 0),
+    0,
+  );
+  const completedBookings = state.bookings.filter(
+    (booking) => booking.status === 'completed',
+  ).length;
+
+  document.getElementById('stat-patients').textContent = state.patients.length.toLocaleString('en-IN');
+  document.getElementById('stat-nurses').textContent = state.nurses.length.toLocaleString('en-IN');
+  document.getElementById('stat-bookings').textContent = state.bookings.length.toLocaleString('en-IN');
+  document.getElementById('stat-completed').textContent = completedBookings.toLocaleString('en-IN');
+  document.getElementById('stat-revenue').textContent = formatCurrency(totalRevenue);
+  document.getElementById('stat-commission').textContent = formatCurrency(totalCommission);
+
+  document.getElementById('analytics-revenue').textContent = formatCurrency(totalRevenue);
+  document.getElementById('analytics-profit').textContent = formatCurrency(totalCommission);
+  document.getElementById('analytics-users').textContent = (
+    state.patients.length + state.nurses.length
+  ).toLocaleString('en-IN');
+}
+
+function renderUsers() {
+  const term = searchUsersInput.value.trim().toLowerCase();
+  const rows = state.patients
+    .filter((user) => {
+      if (!term) {
+        return true;
+      }
+      return [user.name, user.email, user.phone]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(term));
+    })
+    .sort((a, b) => (toDate(b.createdAt)?.getTime() || 0) - (toDate(a.createdAt)?.getTime() || 0))
+    .map((user) => `
+      <tr>
+        <td>${escapeHtml(user.name || 'Patient')}</td>
+        <td>${escapeHtml(user.phone || '-')}</td>
+        <td>${escapeHtml(user.email || '-')}</td>
+        <td>${escapeHtml(user.address || 'No address')}</td>
+        <td>${formatDate(user.createdAt)}</td>
+      </tr>
+    `)
+    .join('');
+
+  document.getElementById('users-list').innerHTML = rows
+    ? tableMarkup(['Name', 'Phone', 'Email', 'Address', 'Joined'], rows)
+    : emptyState('No patient records found for the current search.');
+}
+
+function renderNurses() {
+  const term = searchNursesInput.value.trim().toLowerCase();
+  const rows = state.nurses
+    .filter((nurse) => {
+      if (!term) {
+        return true;
+      }
+      return [nurse.name, nurse.email, nurse.phone]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(term));
+    })
+    .sort((a, b) => (toDate(b.createdAt)?.getTime() || 0) - (toDate(a.createdAt)?.getTime() || 0))
+    .map((nurse) => `
+      <tr>
+        <td>${escapeHtml(nurse.name || 'Nurse')}</td>
+        <td>${escapeHtml(nurse.phone || '-')}</td>
+        <td>${escapeHtml(nurse.specializations?.join(', ') || 'General care')}</td>
+        <td>${nurse.verified ? '<span class="status-badge success">Verified</span>' : '<span class="status-badge warning">Pending</span>'}</td>
+        <td>${nurse.isOnline ? '<span class="status-badge info">Online</span>' : '<span class="status-badge muted">Offline</span>'}</td>
+        <td>${typeof nurse.rating === 'number' ? nurse.rating.toFixed(1) : '0.0'}</td>
+      </tr>
+    `)
+    .join('');
+
+  document.getElementById('nurses-list').innerHTML = rows
+    ? tableMarkup(['Name', 'Phone', 'Specialization', 'Verification', 'Live Status', 'Rating'], rows)
+    : emptyState('No nurse records found for the current search.');
+}
+
+function renderBookings() {
+  const filterValue = bookingFilter.value;
+  const rows = state.bookings
+    .filter((booking) => filterValue === 'all' || booking.status === filterValue)
+    .sort((a, b) => (toDate(b.createdAt)?.getTime() || 0) - (toDate(a.createdAt)?.getTime() || 0))
+    .map((booking) => `
+      <tr>
+        <td>${escapeHtml(booking.serviceName || 'Service')}</td>
+        <td>${escapeHtml(booking.patientName || 'Patient')}</td>
+        <td>${escapeHtml(booking.nurseName || 'Awaiting assignment')}</td>
+        <td>${formatCurrency(booking.totalAmount || 0)}</td>
+        <td><span class="status-badge ${badgeClass(booking.status)}">${escapeHtml((booking.status || 'pending').replaceAll('_', ' '))}</span></td>
+        <td>${formatDate(booking.createdAt)}</td>
+      </tr>
+    `)
+    .join('');
+
+  document.getElementById('bookings-list').innerHTML = rows
+    ? tableMarkup(['Service', 'Patient', 'Nurse', 'Amount', 'Status', 'Created'], rows)
+    : emptyState('No bookings match the selected filter.');
+}
+
+function renderRecentBookings() {
+  const rows = state.bookings
+    .slice()
+    .sort((a, b) => (toDate(b.createdAt)?.getTime() || 0) - (toDate(a.createdAt)?.getTime() || 0))
+    .slice(0, 6)
+    .map((booking) => `
+      <tr>
+        <td>${escapeHtml(booking.patientName || 'Patient')}</td>
+        <td>${escapeHtml(booking.serviceName || 'Service')}</td>
+        <td>${escapeHtml(booking.nurseName || 'Searching')}</td>
+        <td><span class="status-badge ${badgeClass(booking.status)}">${escapeHtml((booking.status || 'pending').replaceAll('_', ' '))}</span></td>
+        <td>${formatCurrency(booking.totalAmount || 0)}</td>
+      </tr>
+    `)
+    .join('');
+
+  document.getElementById('recent-bookings').innerHTML = rows
+    ? tableMarkup(['Patient', 'Service', 'Nurse', 'Status', 'Amount'], rows)
+    : emptyState('Bookings will appear here once patients start placing orders.');
+}
+
+function renderPayments() {
+  const rows = state.payments
+    .slice()
+    .sort((a, b) => (toDate(b.createdAt || b.timestamp)?.getTime() || 0) - (toDate(a.createdAt || a.timestamp)?.getTime() || 0))
+    .map((payment) => `
+      <tr>
+        <td>${escapeHtml(payment.bookingId || '-')}</td>
+        <td>${formatCurrency(payment.amount || 0)}</td>
+        <td>${formatCurrency(payment.nurseEarning || 0)}</td>
+        <td>${formatCurrency(payment.platformCommission || payment.commission || 0)}</td>
+        <td><span class="status-badge ${badgeClass(payment.status)}">${escapeHtml(payment.status || 'pending')}</span></td>
+        <td>${formatDate(payment.createdAt || payment.timestamp)}</td>
+      </tr>
+    `)
+    .join('');
+
+  document.getElementById('payments-list').innerHTML = rows
+    ? tableMarkup(['Booking', 'Amount', 'Nurse Share', 'Commission', 'Status', 'Recorded'], rows)
+    : emptyState('Payment records will appear here after completed services.');
+}
+
+function renderWithdrawals() {
+  const rows = state.withdrawals
+    .slice()
+    .sort((a, b) => (toDate(b.requestedAt)?.getTime() || 0) - (toDate(a.requestedAt)?.getTime() || 0))
+    .map((withdrawal) => `
+      <tr>
+        <td>${escapeHtml(withdrawal.nurseId || '-')}</td>
+        <td>${formatCurrency(withdrawal.amount || 0)}</td>
+        <td><span class="status-badge ${badgeClass(withdrawal.status)}">${escapeHtml(withdrawal.status || 'pending')}</span></td>
+        <td>${escapeHtml(withdrawal.payoutMode || 'manual_hold')}</td>
+        <td>${formatDate(withdrawal.requestedAt)}</td>
+      </tr>
+    `)
+    .join('');
+
+  document.getElementById('withdrawals-list').innerHTML = rows
+    ? tableMarkup(['Nurse', 'Amount', 'Status', 'Payout Mode', 'Requested'], rows)
+    : emptyState('Withdrawal requests will appear here once nurses request a payout.');
+}
+
+function tableMarkup(headers, rows) {
+  return `
+    <table>
+      <thead>
+        <tr>${headers.map((header) => `<th>${escapeHtml(header)}</th>`).join('')}</tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+  `;
+}
+
+function emptyState(text) {
+  return `<p class="empty-state">${escapeHtml(text)}</p>`;
+}
+
+function badgeClass(status = '') {
+  switch (status) {
+    case 'completed':
+    case 'verified':
+    case 'success':
+      return 'success';
+    case 'accepted':
+    case 'in_progress':
+    case 'processing':
+      return 'info';
+    case 'pending':
+    case 'settlement_pending':
+    case 'pending_review':
+      return 'warning';
+    case 'cancelled':
+    case 'failed':
+    case 'rejected':
+      return 'danger';
+    default:
+      return 'muted';
+  }
+}
+
+function subscribeToLiveData() {
+  clearSubscriptions();
+
+  unsubscribers.push(
+    onSnapshot(query(collection(db, 'users'), where('role', '==', 'patient')), (snapshot) => {
+      state.patients = snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
+      renderUsers();
+      renderStats();
+    }),
+  );
+
+  unsubscribers.push(
+    onSnapshot(query(collection(db, 'users'), where('role', '==', 'nurse')), (snapshot) => {
+      state.nurses = snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
+      renderNurses();
+      renderStats();
+    }),
+  );
+
+  unsubscribers.push(
+    onSnapshot(collection(db, 'bookings'), (snapshot) => {
+      state.bookings = snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
+      renderBookings();
+      renderRecentBookings();
+      renderStats();
+    }),
+  );
+
+  unsubscribers.push(
+    onSnapshot(collection(db, 'payments'), (snapshot) => {
+      state.payments = snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
+      renderPayments();
+      renderStats();
+    }),
+  );
+
+  unsubscribers.push(
+    onSnapshot(collection(db, 'withdrawals'), (snapshot) => {
+      state.withdrawals = snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
+      renderWithdrawals();
+    }),
+  );
+}
+
+async function handleAuthenticatedUser(user) {
+  const profileRef = doc(db, 'users', user.uid);
+  const profileSnap = await getDoc(profileRef);
+
+  if (!profileSnap.exists() || profileSnap.data().role !== 'admin') {
+    loginError.textContent = 'This account is not authorized for admin access.';
+    await signOut(auth);
+    return;
+  }
+
+  loginError.textContent = '';
+  adminName.textContent = profileSnap.data().name || user.email || 'Admin';
+  adminAvatar.textContent = (profileSnap.data().name || user.email || 'A')
+    .trim()
+    .charAt(0)
+    .toUpperCase();
+  adminStatus.textContent = `Signed in as ${user.email || 'admin user'}`;
+  setAuthenticatedView(true);
+  subscribeToLiveData();
+  showPage('dashboard');
+}
+
+loginForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  loginError.textContent = '';
+  loginButton.disabled = true;
+  loginButton.textContent = 'Signing In...';
+
+  const email = document.getElementById('admin-email').value.trim();
+  const password = document.getElementById('admin-password').value;
+
   try {
-    loadFirebaseData();
-  } catch (e) {
-    console.error("Firebase load err:", e);
-    // fallback if no connection
-    animateCounter('stat-patients', 0);
-    animateCounter('stat-nurses', 0);
+    await signInWithEmailAndPassword(auth, email, password);
+  } catch (error) {
+    loginError.textContent = error.message || 'Unable to sign in.';
+  } finally {
+    loginButton.disabled = false;
+    loginButton.textContent = 'Sign In';
+  }
+});
+
+signoutButton.addEventListener('click', async () => {
+  await signOut(auth);
+});
+
+searchUsersInput.addEventListener('input', renderUsers);
+searchNursesInput.addEventListener('input', renderNurses);
+bookingFilter.addEventListener('change', renderBookings);
+
+onAuthStateChanged(auth, async (user) => {
+  clearSubscriptions();
+
+  if (!user) {
+    setAuthenticatedView(false);
+    adminStatus.textContent = 'Authenticated admin access';
+    return;
+  }
+
+  try {
+    await handleAuthenticatedUser(user);
+  } catch (error) {
+    loginError.textContent = error.message || 'Unable to load admin profile.';
+    await signOut(auth);
   }
 });

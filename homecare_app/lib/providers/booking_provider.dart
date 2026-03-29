@@ -114,24 +114,29 @@ class BookingProvider extends ChangeNotifier {
   }
 
   // Mark service as completed (patient confirms)
-  Future<void> markCompleted(String bookingId, String nurseId) async {
+  Future<void> markCompleted(String bookingId) async {
     _isLoading = true;
+    _error = null;
     notifyListeners();
-    
-    await _firestoreService.completeBooking(bookingId, nurseId);
-    
-    _isLoading = false;
-    _activeBooking = null;
-    notifyListeners();
+
+    try {
+      await _firestoreService.completeBooking(bookingId);
+      _activeBooking = null;
+    } catch (e) {
+      _error = e.toString();
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
   }
 
   // ======== NURSE OPERATIONS ========
 
   // Listen to pending bookings (for nurses)
-  void listenToPendingBookings() {
+  void listenToPendingBookings(String nurseId) {
     _bookingsSubscription?.cancel();
     _bookingsSubscription = _firestoreService
-        .streamPendingBookings()
+        .streamPendingBookings(nurseId)
         .listen((bookings) {
       _bookings = bookings;
       notifyListeners();
@@ -163,12 +168,32 @@ class BookingProvider extends ChangeNotifier {
   // Accept booking (nurse)
   Future<void> acceptBooking(String bookingId, String nurseId, String nurseName) async {
     _isLoading = true;
+    _error = null;
     notifyListeners();
-    
-    await _firestoreService.acceptBooking(bookingId, nurseId, nurseName);
-    
-    _isLoading = false;
+
+    try {
+      await _firestoreService.acceptBooking(bookingId, nurseId, nurseName);
+    } catch (e) {
+      _error = e.toString();
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> rejectBooking(String bookingId, String nurseId) async {
+    _isLoading = true;
+    _error = null;
     notifyListeners();
+
+    try {
+      await _firestoreService.rejectBooking(bookingId, nurseId);
+    } catch (e) {
+      _error = e.toString();
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
   }
 
   // Start service (nurse)
