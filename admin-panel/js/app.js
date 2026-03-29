@@ -35,22 +35,11 @@ function toggleSidebar() {
 }
 
 // ====== DEMO DATA ======
-// This populates the dashboard with sample data
-// Replace with Firebase integration when connected
+// ====== DEMO DATA (REMOVED) ======
+// This has been updated to use live Firebase data below
 
 function loadDemoData() {
-  // Stats
-  animateCounter('stat-patients', 156);
-  animateCounter('stat-nurses', 42);
-  animateCounter('stat-bookings', 893);
-  animateCounter('stat-completed', 761);
-  document.getElementById('stat-revenue').textContent = '₹8,93,000';
-  document.getElementById('stat-commission').textContent = '₹1,78,600';
-  
-  // Analytics
-  document.getElementById('analytics-revenue').textContent = '₹8,93,000';
-  document.getElementById('analytics-profit').textContent = '₹1,78,600';
-  document.getElementById('analytics-users').textContent = '198';
+  // Obsolete: Replaced by loadFirebaseData()
 }
 
 function animateCounter(id, target) {
@@ -68,13 +57,17 @@ function animateCounter(id, target) {
 }
 
 // ====== FIREBASE INTEGRATION ======
-// Uncomment and configure when Firebase is connected
-/*
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import { getFirestore, collection, getDocs, query, where, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
 const firebaseConfig = {
-  // Your Firebase config here
+  apiKey: 'AIzaSyBOatncA5uBoI2XCv-9fVTnsim_l2zIzK0',
+  authDomain: 'home-care-nursing-e733e.firebaseapp.com',
+  projectId: 'home-care-nursing-e733e',
+  storageBucket: 'home-care-nursing-e733e.firebasestorage.app',
+  messagingSenderId: '1069702495258',
+  appId: '1:1069702495258:web:e651e83ad9d7901a1825a3',
+  measurementId: 'G-B2RR7NXH4R'
 };
 
 const app = initializeApp(firebaseConfig);
@@ -105,10 +98,24 @@ async function loadFirebaseData() {
   });
   document.getElementById('stat-revenue').textContent = `₹${totalRevenue.toLocaleString('en-IN')}`;
   document.getElementById('stat-commission').textContent = `₹${totalCommission.toLocaleString('en-IN')}`;
+
+  // Update Analytics fields too if present
+  if (document.getElementById('analytics-revenue')) {
+    document.getElementById('analytics-revenue').textContent = `₹${totalRevenue.toLocaleString('en-IN')}`;
+    document.getElementById('analytics-profit').textContent = `₹${totalCommission.toLocaleString('en-IN')}`;
+    document.getElementById('analytics-users').textContent = (usersSnap.size + nursesSnap.size).toString();
+  }
 }
-*/
 
 // ====== INIT ======
 document.addEventListener('DOMContentLoaded', () => {
-  loadDemoData();
+  // Use Live Data from Firebase Toolkit
+  try {
+    loadFirebaseData();
+  } catch (e) {
+    console.error("Firebase load err:", e);
+    // fallback if no connection
+    animateCounter('stat-patients', 0);
+    animateCounter('stat-nurses', 0);
+  }
 });

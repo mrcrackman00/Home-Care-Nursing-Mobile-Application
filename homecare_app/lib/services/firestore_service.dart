@@ -26,6 +26,10 @@ class FirestoreService {
     await _firestore.collection('users').doc(uid).update(data);
   }
 
+  Future<void> updateUserField(String uid, String field, dynamic value) async {
+    await _firestore.collection('users').doc(uid).update({field: value});
+  }
+
   // ======== NURSE OPERATIONS ========
 
   // Get nearby online nurses (simplified - within a radius)

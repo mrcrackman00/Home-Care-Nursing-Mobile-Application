@@ -7,6 +7,7 @@ class UserModel {
   final String phone;
   final String role; // 'patient' or 'nurse'
   final String profileImage;
+  final String? fcmToken;
   final DateTime createdAt;
   
   // Patient specific
@@ -31,6 +32,7 @@ class UserModel {
     required this.phone,
     required this.role,
     this.profileImage = '',
+    this.fcmToken,
     DateTime? createdAt,
     this.address,
     this.location,
@@ -53,6 +55,7 @@ class UserModel {
       'phone': phone,
       'role': role,
       'profileImage': profileImage,
+      'fcmToken': fcmToken,
       'createdAt': Timestamp.fromDate(createdAt),
     };
     
@@ -84,6 +87,7 @@ class UserModel {
       phone: map['phone'] ?? '',
       role: map['role'] ?? 'patient',
       profileImage: map['profileImage'] ?? '',
+      fcmToken: map['fcmToken'],
       createdAt: map['createdAt'] != null 
           ? (map['createdAt'] as Timestamp).toDate() 
           : DateTime.now(),
@@ -112,6 +116,7 @@ class UserModel {
     String? email,
     String? phone,
     String? profileImage,
+    String? fcmToken,
     String? address,
     GeoPoint? location,
     bool? isOnline,
@@ -131,6 +136,7 @@ class UserModel {
       phone: phone ?? this.phone,
       role: role,
       profileImage: profileImage ?? this.profileImage,
+      fcmToken: fcmToken ?? this.fcmToken,
       createdAt: createdAt,
       address: address ?? this.address,
       location: location ?? this.location,

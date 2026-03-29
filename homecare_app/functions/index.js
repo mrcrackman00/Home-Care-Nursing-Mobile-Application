@@ -107,3 +107,94 @@ exports.requestWithdrawal = functions.firestore
       });
     }
   });
+
+// Notify nurses when a new booking is created
+exports.onBookingCreated = functions.firestore
+  .document('bookings/{bookingId}')
+  .onCreate(async (snap, context) => {
+    const data = snap.data();
+    
+    // Find nearby available nurses. For simplicity, just send to all nurses
+    const nursesSnapshot = await db.collection('users')
+      .where('role', '==', 'nurse')
+      .where('isAvailable', '==', true)
+      .where('isOnline', '==', true)
+      .get();
+      
+    if (nursesSnapshot.empty) {
+      console.log('No available nurses found for new booking.');
+      return null;
+    }
+
+    const tokens = [];
+    nursesSnapshot.forEach(doc => {
+      const nurseData = doc.data();
+      if (nurseData.fcmToken) {
+        tokens.push(nurseData.fcmToken);
+      }
+    });
+
+    if (tokens.length === 0) return null;
+
+    const payload = {
+      notification: {
+        title: 'New Booking Request!',
+        body: `A patient needs ${data.serviceName} service nearby.`,
+      },
+      data: {
+        click_action: 'FLUTTER_NOTIFICATION_CLICK',
+        bookingId: context.params.bookingId,
+        type: 'new_booking'
+      }
+    };
+
+    try {
+      const response = await admin.messaging().sendToDevice(tokens, payload);
+      console.log('Successfully sent message to available nurses:', response);
+    } catch (error) {
+      console.error('Error sending message:', error);
+    }
+    return null;
+  });
+
+// Notify patient when a nurse accepts
+exports.onBookingAccepted = functions.firestore
+  .document('bookings/{bookingId}')
+  .onUpdate(async (change, context) => {
+    const beforeData = change.before.data();
+    const afterData = change.after.data();
+
+    if (beforeData.status !== 'accepted' && afterData.status === 'accepted') {
+      const patientId = afterData.patientId;
+      const nurseName = afterData.nurseName || 'A nurse';
+      
+      const patientDoc = await db.collection('users').doc(patientId).get();
+      if (!patientDoc.exists) return null;
+      
+      const patientData = patientDoc.data();
+      const token = patientData.fcmToken;
+      
+      if (!token) return null;
+
+      const payload = {
+        notification: {
+          title: 'Booking Accepted!',
+          body: `${nurseName} is on the way for your ${afterData.serviceName} service.`,
+        },
+        data: {
+          click_action: 'FLUTTER_NOTIFICATION_CLICK',
+          bookingId: context.params.bookingId,
+          type: 'booking_accepted'
+        }
+      };
+
+      try {
+        await admin.messaging().sendToDevice(token, payload);
+        console.log(`Successfully notified patient ${patientId} of acceptance.`);
+      } catch (error) {
+        console.error('Error sending acceptance message:', error);
+      }
+    }
+    return null;
+  });
+

@@ -9,6 +9,9 @@ import '../../providers/location_provider.dart';
 import '../../services/firestore_service.dart';
 import '../../services/location_service.dart';
 import '../../models/user_model.dart';
+import '../../services/payment_service.dart';
+import 'package:razorpay_flutter/razorpay_flutter.dart';
+import '../../providers/auth_provider.dart';
 
 class TrackingScreen extends StatefulWidget {
   const TrackingScreen({super.key});
@@ -23,12 +26,19 @@ class _TrackingScreenState extends State<TrackingScreen>
   final FirestoreService _firestoreService = FirestoreService();
   late AnimationController _pulseController;
   UserModel? _nurse;
+  PaymentService? _paymentService;
 
   @override
   void initState() {
     super.initState();
     _pulseController = AnimationController(vsync: this, duration: const Duration(seconds: 2))..repeat();
     
+    _paymentService = PaymentService(
+      onSuccess: _handlePaymentSuccess,
+      onFailure: _handlePaymentError,
+      onExternalWallet: _handleExternalWallet,
+    );
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final bookingId = ModalRoute.of(context)!.settings.arguments as String?;
       if (bookingId != null) {
@@ -40,6 +50,7 @@ class _TrackingScreenState extends State<TrackingScreen>
 
   @override
   void dispose() {
+    _paymentService?.dispose();
     _pulseController.dispose();
     super.dispose();
   }
@@ -351,27 +362,65 @@ class _TrackingScreenState extends State<TrackingScreen>
       builder: (ctx) => AlertDialog(
         backgroundColor: AppTheme.bgCard,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Complete Service?', style: TextStyle(color: Colors.white)),
-        content: const Text('Are you sure the service is completed? Payment will be processed.', style: TextStyle(color: AppTheme.textSecondary)),
+        title: const Text('Complete & Pay?', style: TextStyle(color: Colors.white)),
+        content: Text('Are you sure the service is completed? You will be charged ₹${bookingProvider.activeBooking?.totalAmount.toStringAsFixed(0)}.', style: const TextStyle(color: AppTheme.textSecondary)),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Not Yet')),
           ElevatedButton(
-            onPressed: () async {
+            onPressed: () {
               Navigator.pop(ctx);
-              await bookingProvider.markCompleted(bookingId, nurseId);
-              if (mounted) {
-                Navigator.pushReplacementNamed(context, AppRoutes.rating, arguments: {
-                  'bookingId': bookingId,
-                  'nurseId': nurseId,
-                });
-              }
+              _initiatePayment(bookingProvider);
             },
-            child: const Text('Yes, Complete'),
+            child: const Text('Pay & Complete'),
           ),
         ],
       ),
     );
   }
+
+  void _initiatePayment(BookingProvider bookingProvider) {
+    if (bookingProvider.activeBooking == null) return;
+    final booking = bookingProvider.activeBooking!;
+    final user = Provider.of<AuthProvider>(context, listen: false).user;
+    
+    _paymentService?.openCheckout(
+      amount: booking.totalAmount,
+      name: 'HomeCare Nursing',
+      description: booking.serviceName,
+      contact: user?.phone ?? '9999999999',
+      email: user?.email ?? 'patient@homecare.com',
+    );
+  }
+
+  void _handlePaymentSuccess(PaymentSuccessResponse response) async {
+    final bookingProvider = Provider.of<BookingProvider>(context, listen: false);
+    final booking = bookingProvider.activeBooking;
+    
+    if (booking != null && booking.nurseId != null) {
+      await bookingProvider.markCompleted(booking.id, booking.nurseId!);
+      
+      if (mounted) {
+        // Show success screen then rating
+        Navigator.pushReplacementNamed(context, AppRoutes.rating, arguments: {
+          'bookingId': booking.id,
+          'nurseId': booking.nurseId,
+        });
+      }
+    }
+  }
+
+  void _handlePaymentError(PaymentFailureResponse response) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Payment failed: ${response.message}')),
+    );
+  }
+
+  void _handleExternalWallet(ExternalWalletResponse response) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Wallet selected: ${response.walletName}')),
+    );
+  }
+
 
   Widget _buildStatusBanner(String status) {
     IconData icon;

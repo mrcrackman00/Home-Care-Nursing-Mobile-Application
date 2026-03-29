@@ -4,10 +4,12 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../models/user_model.dart';
 import '../services/auth_service.dart';
 import '../services/firestore_service.dart';
+import '../services/notification_service.dart';
 
 class AuthProvider extends ChangeNotifier {
   final AuthService _authService = AuthService();
   final FirestoreService _firestoreService = FirestoreService();
+  final NotificationService _notificationService = NotificationService();
 
   UserModel? _user;
   bool _isLoading = false;
@@ -25,6 +27,9 @@ class AuthProvider extends ChangeNotifier {
     User? firebaseUser = _authService.currentUser;
     if (firebaseUser != null) {
       _user = await _authService.getUserData(firebaseUser.uid);
+      if (_user != null) {
+        _notificationService.initialize(_user!.uid);
+      }
       notifyListeners();
     }
   }
@@ -49,6 +54,9 @@ class AuthProvider extends ChangeNotifier {
         phone: phone,
         role: role,
       );
+      if (_user != null) {
+        _notificationService.initialize(_user!.uid);
+      }
       _isLoading = false;
       notifyListeners();
       return _user != null;
@@ -79,6 +87,9 @@ class AuthProvider extends ChangeNotifier {
         email: email,
         password: password,
       );
+      if (_user != null) {
+        _notificationService.initialize(_user!.uid);
+      }
       _isLoading = false;
       notifyListeners();
       return _user != null;
@@ -137,6 +148,9 @@ class AuthProvider extends ChangeNotifier {
 
       if (firebaseUser != null) {
         _user = await _authService.getUserData(firebaseUser.uid);
+        if (_user != null) {
+          _notificationService.initialize(_user!.uid);
+        }
         _isLoading = false;
         notifyListeners();
         return true;
