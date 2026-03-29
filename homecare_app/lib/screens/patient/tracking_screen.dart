@@ -392,7 +392,7 @@ class _TrackingScreenState extends State<TrackingScreen>
     );
   }
 
-  void _handlePaymentSuccess(PaymentSuccessResponse response) async {
+  void _handlePaymentSuccess(dynamic response) async {
     final bookingProvider = Provider.of<BookingProvider>(context, listen: false);
     final booking = bookingProvider.activeBooking;
     
@@ -409,15 +409,15 @@ class _TrackingScreenState extends State<TrackingScreen>
     }
   }
 
-  void _handlePaymentError(PaymentFailureResponse response) {
+  void _handlePaymentError(dynamic response) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Payment failed: ${response.message}')),
+      SnackBar(content: Text('Payment failed: ${response.message ?? "Unknown Error"}')),
     );
   }
 
-  void _handleExternalWallet(ExternalWalletResponse response) {
+  void _handleExternalWallet(dynamic response) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Wallet selected: ${response.walletName}')),
+      SnackBar(content: Text('Wallet selected: ${response.walletName ?? "Unknown Wallet"}')),
     );
   }
 
