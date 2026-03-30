@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Home Care Nursing Project Status</title>
+    <style>
+      :root {
+        --navy: #0a1628;
+        --blue: #1b6feb;
+        --light-blue: #ebf3ff;
+        --green: #00b57a;
+        --amber: #f5a623;
+        --red: #e8345a;
+        --bg: #f4f7fc;
+        --surface: #ffffff;
+        --text: #0a1628;
+        --muted: #6b7a99;
+        --border: #e8edf5;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: "Segoe UI", Arial, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        line-height: 1.5;
+      }
+
+      .page {
+        max-width: 1080px;
+        margin: 0 auto;
+        padding: 40px 36px 56px;
+      }
+
+      .hero {
+        background: linear-gradient(135deg, #0a1628, #1b3a6b);
+        color: #fff;
+        border-radius: 24px;
+        padding: 28px 30px;
+        box-shadow: 0 10px 30px rgba(10, 22, 40, 0.16);
+      }
+
+      .hero h1 {
+        margin: 0 0 8px;
+        font-size: 32px;
+        line-height: 1.1;
+      }
+
+      .hero p {
+        margin: 0;
+        color: rgba(255, 255, 255, 0.84);
+        font-size: 15px;
+      }
+
+      .meta {
+        margin-top: 18px;
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        padding: 7px 12px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.12);
+        font-size: 12px;
+        font-weight: 600;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 18px;
+        margin-top: 22px;
+      }
+
+      .metric {
+        background: var(--surface);
+        border-radius: 20px;
+        padding: 22px;
+        box-shadow: 0 6px 18px rgba(10, 22, 40, 0.07);
+      }
+
+      .metric .label {
+        color: var(--muted);
+        font-size: 13px;
+        margin-bottom: 8px;
+      }
+
+      .metric .value {
+        font-size: 34px;
+        font-weight: 800;
+        color: var(--navy);
+      }
+
+      section {
+        margin-top: 28px;
+      }
+
+      .card {
+        background: var(--surface);
+        border-radius: 20px;
+        padding: 22px;
+        box-shadow: 0 6px 18px rgba(10, 22, 40, 0.07);
+      }
+
+      h2 {
+        margin: 0 0 14px;
+        font-size: 22px;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      th,
+      td {
+        text-align: left;
+        padding: 12px 10px;
+        vertical-align: top;
+        border-bottom: 1px solid var(--border);
+        font-size: 14px;
+      }
+
+      th {
+        color: var(--muted);
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+      }
+
+      .status {
+        display: inline-block;
+        padding: 6px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .done {
+        background: #e6f9f3;
+        color: var(--green);
+      }
+
+      .mostly {
+        background: var(--light-blue);
+        color: var(--blue);
+      }
+
+      .partial {
+        background: #fff5e6;
+        color: var(--amber);
+      }
+
+      .pending {
+        background: #fdedf1;
+        color: var(--red);
+      }
+
+      .blocked {
+        background: #ffe8ee;
+        color: var(--red);
+      }
+
+      ul {
+        margin: 12px 0 0;
+        padding-left: 20px;
+      }
+
+      li {
+        margin-bottom: 8px;
+      }
+
+      .footer {
+        margin-top: 28px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      @media print {
+        body {
+          background: #fff;
+        }
+
+        .page {
+          max-width: none;
+          padding: 20px;
+        }
+
+        .card,
+        .metric,
+        .hero {
+          box-shadow: none;
+          break-inside: avoid;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <div class="hero">
+        <h1>Home Care Nursing Project Status</h1>
+        <p>
+          Current product progress summary covering UI, patient and nurse apps,
+          admin panel, booking system, earnings, backend maturity, and
+          production blockers.
+        </p>
+        <div class="meta">
+          <span class="pill">Prepared: 30 March 2026, 08:06 PM</span>
+          <span class="pill">Workspace: Home Care Nursing</span>
+          <span class="pill">Mode: Manual MVP progressing toward production</span>
+        </div>
+      </div>
+
+      <div class="grid">
+        <div class="metric">
+          <div class="label">Manual MVP / demo-ready progress</div>
+          <div class="value">75-80%</div>
+        </div>
+        <div class="metric">
+          <div class="label">Full production-scale progress</div>
+          <div class="value">45-55%</div>
+        </div>
+      </div>
+
+      <section>
+        <div class="card">
+          <h2>Status Table</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Area</th>
+                <th>Status</th>
+                <th>What is already done</th>
+                <th>What is still left</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Product idea and flow</td>
+                <td><span class="status done">Done</span></td>
+                <td>Patient app, nurse app, admin panel, live booking direction, and earnings model are clearly defined.</td>
+                <td>Production-level automation and operational hardening.</td>
+              </tr>
+              <tr>
+                <td>UI and UX design</td>
+                <td><span class="status mostly">Mostly Done</span></td>
+                <td>Premium healthcare redesign, dashboards, cards, profile flows, booking flow, and tracking layouts are in place.</td>
+                <td>Final polish, tap bug cleanup, and better edge-state screens.</td>
+              </tr>
+              <tr>
+                <td>Patient app</td>
+                <td><span class="status mostly">Mostly Done</span></td>
+                <td>Nearby nurses, booking flow, history, profile edit screen, and tracking flow exist.</td>
+                <td>Full QA, empty states, and live runtime verification across devices.</td>
+              </tr>
+              <tr>
+                <td>Nurse app</td>
+                <td><span class="status mostly">Mostly Done</span></td>
+                <td>Online/offline, requests, QR booking, profile edit, active job flow, earnings, and withdrawal UI are implemented.</td>
+                <td>End-to-end request stability, field testing, and stronger operational states.</td>
+              </tr>
+              <tr>
+                <td>Admin panel</td>
+                <td><span class="status partial">Partial</span></td>
+                <td>Firebase-connected dashboard and some manual controls are available.</td>
+                <td>Complete admin action workflows, filters, moderation, and audit polish.</td>
+              </tr>
+              <tr>
+                <td>Patient profile editing</td>
+                <td><span class="status partial">Partial</span></td>
+                <td>Real profile screen and avatar support have been built.</td>
+                <td>Final runtime verification and remaining web interaction cleanup.</td>
+              </tr>
+              <tr>
+                <td>Nurse profile editing</td>
+                <td><span class="status mostly">Mostly Done</span></td>
+                <td>Professional profile form, verification-aware visibility, and photo field are added.</td>
+                <td>Final QA and admin verification dependency checks.</td>
+              </tr>
+              <tr>
+                <td>Profile photos</td>
+                <td><span class="status partial">Partial</span></td>
+                <td>URL-based profile photo support is added for patient and nurse.</td>
+                <td>Gallery or camera upload flow.</td>
+              </tr>
+              <tr>
+                <td>Nearby nurse discovery</td>
+                <td><span class="status mostly">Mostly Done</span></td>
+                <td>Nearby live nurses can be listed and selected.</td>
+                <td>Better sorting, filtering, and real-world testing.</td>
+              </tr>
+              <tr>
+                <td>Real-time location</td>
+                <td><span class="status partial">Partial</span></td>
+                <td>Live location and map-based tracking base exists.</td>
+                <td>Real-device verification, smoother updates, and background reliability.</td>
+              </tr>
+              <tr>
+                <td>Google Maps</td>
+                <td><span class="status partial">Partial</span></td>
+                <td>Integration exists in app code.</td>
+                <td>Web API restrictions, key setup, and runtime map configuration fixes.</td>
+              </tr>
+              <tr>
+                <td>QR scan booking</td>
+                <td><span class="status mostly">Mostly Done</span></td>
+                <td>Nurse QR generation and patient scan shortcut flow are added.</td>
+                <td>Real-device camera testing and polish.</td>
+              </tr>
+              <tr>
+                <td>Booking request system</td>
+                <td><span class="status partial">Partial</span></td>
+                <td>Patient request, nurse accept or reject, and main request UI exist.</td>
+                <td>Stable end-to-end QA, retry handling, and production-safe flow.</td>
+              </tr>
+              <tr>
+                <td>Live tracking</td>
+                <td><span class="status partial">Partial</span></td>
+                <td>Patient tracking screen and nurse navigation screen are built.</td>
+                <td>Production-like movement, ETA quality, and route consistency.</td>
+              </tr>
+              <tr>
+                <td>Chat</td>
+                <td><span class="status partial">Partial</span></td>
+                <td>In-app chat is wired into booking flow.</td>
+                <td>Full notification and lifecycle QA.</td>
+              </tr>
+              <tr>
+                <td>Earnings dashboard</td>
+                <td><span class="status partial">Partial</span></td>
+                <td>Earnings UI and manual settlement logic exist.</td>
+                <td>End-to-end verification of balance updates in all scenarios.</td>
+              </tr>
+              <tr>
+                <td>Commission logic</td>
+                <td><span class="status partial">Partial</span></td>
+                <td>Manual MVP calculation logic is present.</td>
+                <td>Production-safe server-side automation.</td>
+              </tr>
+              <tr>
+                <td>Withdrawal flow</td>
+                <td><span class="status partial">Partial</span></td>
+                <td>Withdrawal UI and basic operational flow exist.</td>
+                <td>Approval flow polish and payout integration later.</td>
+              </tr>
+              <tr>
+                <td>Firestore rules</td>
+                <td><span class="status mostly">Mostly Done</span></td>
+                <td>Rules are significantly hardened for the MVP flow.</td>
+                <td>Final production review after all features stabilize.</td>
+              </tr>
+              <tr>
+                <td>Cloud Functions and automation</td>
+                <td><span class="status blocked">Blocked</span></td>
+                <td>Direction and some code logic exist.</td>
+                <td>Blaze plan and real deployment are needed.</td>
+              </tr>
+              <tr>
+                <td>Payment gateway</td>
+                <td><span class="status pending">Pending</span></td>
+                <td>Currently on hold by product decision.</td>
+                <td>Razorpay orders, webhooks, and reconciliation.</td>
+              </tr>
+              <tr>
+                <td>Automatic payout</td>
+                <td><span class="status pending">Pending</span></td>
+                <td>Currently on hold by product decision.</td>
+                <td>Payout API integration and failure handling.</td>
+              </tr>
+              <tr>
+                <td>Notifications</td>
+                <td><span class="status partial">Partial</span></td>
+                <td>Base notification setup exists.</td>
+                <td>Reliable booking lifecycle notifications.</td>
+              </tr>
+              <tr>
+                <td>Security hardening</td>
+                <td><span class="status partial">Partial</span></td>
+                <td>Rules and data protections have improved.</td>
+                <td>App Check, logging, abuse protection, and secret management.</td>
+              </tr>
+              <tr>
+                <td>Real-device testing</td>
+                <td><span class="status pending">Pending</span></td>
+                <td>Browser and preview testing has been done in parts.</td>
+                <td>Patient and nurse live testing on real Android devices.</td>
+              </tr>
+              <tr>
+                <td>Production launch readiness</td>
+                <td><span class="status pending">Pending</span></td>
+                <td>A strong MVP foundation exists.</td>
+                <td>Deployment, monitoring, release builds, support, and policy readiness.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section>
+        <div class="card">
+          <h2>Biggest Current Blockers</h2>
+          <ul>
+            <li>Google Maps web runtime is still failing due to API or key configuration issues.</li>
+            <li>Full patient to nurse end-to-end QA is still pending.</li>
+            <li>Firebase Blaze plan is not enabled, so Cloud Functions automation is blocked.</li>
+            <li>Payment and payout are intentionally on hold, so financial production flow is incomplete.</li>
+          </ul>
+        </div>
+      </section>
+
+      <section>
+        <div class="card">
+          <h2>Recommended Next Steps</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Priority</th>
+                <th>Next work</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>1</td><td>Finish patient-side remaining tap and runtime bugs.</td></tr>
+              <tr><td>2</td><td>Fix Google Maps web configuration completely.</td></tr>
+              <tr><td>3</td><td>Run full patient and nurse booking QA.</td></tr>
+              <tr><td>4</td><td>Verify earnings and withdrawal flow.</td></tr>
+              <tr><td>5</td><td>Run admin panel operational QA.</td></tr>
+              <tr><td>6</td><td>Upgrade Firebase to Blaze plan.</td></tr>
+              <tr><td>7</td><td>Deploy Cloud Functions and automation.</td></tr>
+              <tr><td>8</td><td>Integrate payment gateway and payouts.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <div class="footer">
+        Prepared from the current project workspace state and implementation progress on 30 March 2026.
+      </div>
+    </div>
+  </body>
+</html>
