@@ -11,6 +11,7 @@ import '../screens/patient/payment_screen.dart';
 import '../screens/patient/booking_history_screen.dart';
 import '../screens/patient/rating_screen.dart';
 import '../screens/patient/patient_profile_screen.dart';
+import '../screens/patient/scan_nurse_screen.dart';
 import '../screens/nurse/nurse_home_screen.dart';
 import '../screens/nurse/booking_request_screen.dart';
 import '../screens/nurse/active_booking_screen.dart';
@@ -18,6 +19,7 @@ import '../screens/nurse/earnings_dashboard_screen.dart';
 import '../screens/nurse/withdrawal_screen.dart';
 import '../screens/nurse/nurse_history_screen.dart';
 import '../screens/nurse/nurse_profile_screen.dart';
+import '../screens/nurse/nurse_qr_screen.dart';
 
 class AppRoutes {
   static const String splash = '/';
@@ -34,6 +36,7 @@ class AppRoutes {
   static const String bookingHistory = '/patient/history';
   static const String rating = '/patient/rating';
   static const String patientProfile = '/patient/profile';
+  static const String scanNurse = '/patient/scan-nurse';
   
   // Nurse Routes
   static const String nurseHome = '/nurse/home';
@@ -43,6 +46,7 @@ class AppRoutes {
   static const String withdrawal = '/nurse/withdrawal';
   static const String nurseHistory = '/nurse/history';
   static const String nurseProfile = '/nurse/profile';
+  static const String nurseQr = '/nurse/qr';
 
   static Map<String, WidgetBuilder> get routes => {
     splash: (_) => const SplashScreen(),
@@ -57,6 +61,7 @@ class AppRoutes {
     bookingHistory: (_) => const BookingHistoryScreen(),
     rating: (_) => const RatingScreen(),
     patientProfile: (_) => const PatientProfileScreen(),
+    scanNurse: (_) => const ScanNurseScreen(),
     nurseHome: (_) => const NurseHomeScreen(),
     bookingRequest: (_) => const BookingRequestScreen(),
     activeBooking: (_) => const ActiveBookingScreen(),
@@ -64,5 +69,6 @@ class AppRoutes {
     withdrawal: (_) => const WithdrawalScreen(),
     nurseHistory: (_) => const NurseHistoryScreen(),
     nurseProfile: (_) => const NurseProfileScreen(),
+    nurseQr: (_) => const NurseQrScreen(),
   };
 }

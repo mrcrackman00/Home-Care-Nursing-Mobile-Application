@@ -147,6 +147,41 @@ class AppConstants {
   // Nearby Radius (in meters)
   static const double nearbyRadiusMeters = 5000; // 5km
 
+  static Map<String, dynamic>? serviceById(String? id) {
+    if (id == null || id.isEmpty) {
+      return null;
+    }
+    for (final service in serviceTypes) {
+      if (service['id'] == id) {
+        return service;
+      }
+    }
+    return null;
+  }
+
+  static Map<String, dynamic> fallbackServiceForNurse(List<String>? specializations) {
+    if (specializations != null) {
+      for (final specialization in specializations) {
+        final normalized = specialization.toLowerCase().replaceAll(' ', '_');
+        final direct = serviceById(normalized);
+        if (direct != null) {
+          return direct;
+        }
+
+        final byName = serviceTypes.where(
+          (service) => (service['name'] as String)
+              .toLowerCase()
+              .contains(specialization.toLowerCase()),
+        );
+        if (byName.isNotEmpty) {
+          return byName.first;
+        }
+      }
+    }
+
+    return serviceById('basic_visit') ?? serviceTypes.first;
+  }
+
   // Razorpay Test Key (replace with live)
   static const String razorpayKeyId = 'rzp_test_XXXXXXXXXXXXXX';
   static const String razorpayKeySecret = 'XXXXXXXXXXXXXX';

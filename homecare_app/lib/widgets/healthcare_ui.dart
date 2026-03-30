@@ -489,6 +489,84 @@ class InfoChip extends StatelessWidget {
   }
 }
 
+class AppUserAvatar extends StatelessWidget {
+  const AppUserAvatar({
+    super.key,
+    required this.name,
+    this.imageUrl = '',
+    this.radius = 24,
+    this.backgroundColor = AppTheme.accentLight,
+    this.foregroundColor = AppTheme.accent,
+    this.borderColor,
+    this.borderWidth = 0,
+  });
+
+  final String name;
+  final String imageUrl;
+  final double radius;
+  final Color backgroundColor;
+  final Color foregroundColor;
+  final Color? borderColor;
+  final double borderWidth;
+
+  @override
+  Widget build(BuildContext context) {
+    final size = radius * 2;
+    final trimmedImageUrl = imageUrl.trim();
+
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: backgroundColor,
+        border: borderColor == null
+            ? null
+            : Border.all(color: borderColor!, width: borderWidth),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: trimmedImageUrl.isNotEmpty
+          ? Image.network(
+              trimmedImageUrl,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => _AvatarFallback(
+                name: name,
+                foregroundColor: foregroundColor,
+              ),
+            )
+          : _AvatarFallback(
+              name: name,
+              foregroundColor: foregroundColor,
+            ),
+    );
+  }
+}
+
+class _AvatarFallback extends StatelessWidget {
+  const _AvatarFallback({
+    required this.name,
+    required this.foregroundColor,
+  });
+
+  final String name;
+  final Color foregroundColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final trimmed = name.trim();
+    final initial = trimmed.isNotEmpty ? trimmed[0].toUpperCase() : 'U';
+
+    return Center(
+      child: Text(
+        initial,
+        style: Theme.of(
+          context,
+        ).textTheme.titleLarge?.copyWith(color: foregroundColor),
+      ),
+    );
+  }
+}
+
 class EmptyStateView extends StatelessWidget {
   const EmptyStateView({
     super.key,

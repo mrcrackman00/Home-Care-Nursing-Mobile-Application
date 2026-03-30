@@ -43,6 +43,12 @@
 	</array>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Scan nurse QR codes to book care instantly.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>We use your live location to show nearby nurses and track active bookings in real time.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>We use your live location to support nurse navigation and patient tracking during active bookings.</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 </dict>

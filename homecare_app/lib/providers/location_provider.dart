@@ -12,6 +12,7 @@ class LocationProvider extends ChangeNotifier {
   LatLng? _currentLocation;
   bool _isTracking = false;
   bool _hasPermission = false;
+  String? _trackedNurseId;
 
   LatLng? get currentLocation => _currentLocation;
   bool get isTracking => _isTracking;
@@ -22,15 +23,43 @@ class LocationProvider extends ChangeNotifier {
     _hasPermission = await _locationService.checkPermissions();
     if (_hasPermission) {
       _currentLocation = await _locationService.getCurrentLatLng();
-      notifyListeners();
     }
+    notifyListeners();
+  }
+
+  Future<void> refreshCurrentLocation({String? nurseId}) async {
+    _hasPermission = await _locationService.checkPermissions();
+    if (!_hasPermission) {
+      notifyListeners();
+      return;
+    }
+
+    _currentLocation = await _locationService.getCurrentLatLng();
+    if (_currentLocation != null && nurseId != null) {
+      await _firestoreService.updateNurseLocation(
+        nurseId,
+        LocationService.latLngToGeoPoint(_currentLocation!),
+      );
+    }
+    notifyListeners();
   }
 
   // Start tracking for nurses
-  void startTracking(String nurseId) {
-    if (_isTracking) return;
+  Future<void> startTracking(String nurseId) async {
+    if (_isTracking && _trackedNurseId == nurseId) {
+      return;
+    }
+
+    _trackedNurseId = nurseId;
+    await refreshCurrentLocation(nurseId: nurseId);
+    if (!_hasPermission) {
+      _isTracking = false;
+      notifyListeners();
+      return;
+    }
+
+    _locationService.stopTracking();
     _isTracking = true;
-    
     _locationService.startTracking(
       onLocationUpdate: (Position position) {
         _currentLocation = LatLng(position.latitude, position.longitude);
@@ -49,6 +78,7 @@ class LocationProvider extends ChangeNotifier {
   void stopTracking() {
     _locationService.stopTracking();
     _isTracking = false;
+    _trackedNurseId = null;
     notifyListeners();
   }
 

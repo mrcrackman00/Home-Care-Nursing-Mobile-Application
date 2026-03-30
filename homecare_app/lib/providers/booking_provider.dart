@@ -9,12 +9,12 @@ import '../config/constants.dart';
 
 class BookingProvider extends ChangeNotifier {
   final FirestoreService _firestoreService = FirestoreService();
-  
+
   List<BookingModel> _bookings = [];
   BookingModel? _activeBooking;
   bool _isLoading = false;
   String? _error;
-  
+
   StreamSubscription? _bookingsSubscription;
   StreamSubscription? _activeBookingSubscription;
 
@@ -22,6 +22,23 @@ class BookingProvider extends ChangeNotifier {
   BookingModel? get activeBooking => _activeBooking;
   bool get isLoading => _isLoading;
   String? get error => _error;
+
+  String _presentableError(Object error) {
+    final raw = error.toString().trim();
+    if (raw.startsWith('Bad state: ')) {
+      return raw.substring('Bad state: '.length).trim();
+    }
+    if (raw.startsWith('Exception: ')) {
+      return raw.substring('Exception: '.length).trim();
+    }
+    if (raw.contains('permission-denied')) {
+      return 'You do not have permission to complete this action right now.';
+    }
+    if (raw.contains('Dart exception thrown from converted Future')) {
+      return 'This request could not be completed on web right now. Refresh and try again.';
+    }
+    return raw;
+  }
 
   // ======== PATIENT OPERATIONS ========
 
@@ -32,6 +49,7 @@ class BookingProvider extends ChangeNotifier {
     required GeoPoint location,
     required String address,
     required double price,
+    UserModel? preferredNurse,
     bool isInstant = true,
     DateTime? scheduledTime,
   }) async {
@@ -41,11 +59,11 @@ class BookingProvider extends ChangeNotifier {
 
     try {
       final bookingId = const Uuid().v4();
-      final commission = service['noCommission'] == true 
-          ? 0.0 
+      final commission = service['noCommission'] == true
+          ? 0.0
           : AppConstants.calculateCommission(price);
-      final nurseEarning = service['noCommission'] == true 
-          ? price 
+      final nurseEarning = service['noCommission'] == true
+          ? price
           : AppConstants.calculateNurseEarning(price);
 
       final booking = BookingModel(
@@ -64,15 +82,23 @@ class BookingProvider extends ChangeNotifier {
         totalAmount: price,
         platformCommission: commission,
         nurseEarning: nurseEarning,
+        preferredNurseId: preferredNurse?.uid,
+        offeredNurseId: preferredNurse?.uid,
+        dispatchState: preferredNurse != null
+            ? 'requested_to_nurse'
+            : 'awaiting_admin_assignment',
       );
 
-      await _firestoreService.createBooking(booking);
+      await _firestoreService.createBooking(
+        booking,
+        preferredNurse: preferredNurse,
+      );
       _activeBooking = booking;
       _isLoading = false;
       notifyListeners();
       return bookingId;
     } catch (e) {
-      _error = e.toString();
+      _error = _presentableError(e);
       _isLoading = false;
       notifyListeners();
       return null;
@@ -84,10 +110,18 @@ class BookingProvider extends ChangeNotifier {
     _bookingsSubscription?.cancel();
     _bookingsSubscription = _firestoreService
         .streamPatientBookings(patientId)
-        .listen((bookings) {
-      _bookings = bookings;
-      notifyListeners();
-    });
+        .listen(
+          (bookings) {
+            _error = null;
+            _bookings = bookings;
+            notifyListeners();
+          },
+          onError: (error) {
+            _bookings = [];
+            _error = 'Unable to load patient bookings right now: $error';
+            notifyListeners();
+          },
+        );
   }
 
   // Listen to active booking status
@@ -96,9 +130,9 @@ class BookingProvider extends ChangeNotifier {
     _activeBookingSubscription = _firestoreService
         .streamBooking(bookingId)
         .listen((booking) {
-      _activeBooking = booking;
-      notifyListeners();
-    });
+          _activeBooking = booking;
+          notifyListeners();
+        });
   }
 
   // Cancel booking (patient)
@@ -109,7 +143,12 @@ class BookingProvider extends ChangeNotifier {
   }
 
   // Rate booking
-  Future<void> rateBooking(String bookingId, String nurseId, double rating, String feedback) async {
+  Future<void> rateBooking(
+    String bookingId,
+    String nurseId,
+    double rating,
+    String feedback,
+  ) async {
     await _firestoreService.rateBooking(bookingId, nurseId, rating, feedback);
   }
 
@@ -123,7 +162,7 @@ class BookingProvider extends ChangeNotifier {
       await _firestoreService.completeBooking(bookingId);
       _activeBooking = null;
     } catch (e) {
-      _error = e.toString();
+      _error = _presentableError(e);
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -137,10 +176,18 @@ class BookingProvider extends ChangeNotifier {
     _bookingsSubscription?.cancel();
     _bookingsSubscription = _firestoreService
         .streamPendingBookings(nurseId)
-        .listen((bookings) {
-      _bookings = bookings;
-      notifyListeners();
-    });
+        .listen(
+          (bookings) {
+            _error = null;
+            _bookings = bookings;
+            notifyListeners();
+          },
+          onError: (error) {
+            _bookings = [];
+            _error = 'Unable to load incoming requests right now: $error';
+            notifyListeners();
+          },
+        );
   }
 
   // Listen to nurse's bookings
@@ -148,10 +195,18 @@ class BookingProvider extends ChangeNotifier {
     _bookingsSubscription?.cancel();
     _bookingsSubscription = _firestoreService
         .streamNurseBookings(nurseId)
-        .listen((bookings) {
-      _bookings = bookings;
-      notifyListeners();
-    });
+        .listen(
+          (bookings) {
+            _error = null;
+            _bookings = bookings;
+            notifyListeners();
+          },
+          onError: (error) {
+            _bookings = [];
+            _error = 'Unable to load nurse bookings right now: $error';
+            notifyListeners();
+          },
+        );
   }
 
   // Listen to active nurse booking
@@ -159,14 +214,29 @@ class BookingProvider extends ChangeNotifier {
     _activeBookingSubscription?.cancel();
     _activeBookingSubscription = _firestoreService
         .streamActiveNurseBooking(nurseId)
-        .listen((booking) {
-      _activeBooking = booking;
-      notifyListeners();
-    });
+        .listen((booking) async {
+          _activeBooking = booking;
+          if (booking == null) {
+            try {
+              await _firestoreService.updateUserField(
+                nurseId,
+                'isAvailable',
+                true,
+              );
+            } catch (_) {
+              // Ignore availability sync errors here; the nurse can still toggle online manually.
+            }
+          }
+          notifyListeners();
+        });
   }
 
   // Accept booking (nurse)
-  Future<void> acceptBooking(String bookingId, String nurseId, String nurseName) async {
+  Future<void> acceptBooking(
+    String bookingId,
+    String nurseId,
+    String nurseName,
+  ) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
@@ -174,7 +244,7 @@ class BookingProvider extends ChangeNotifier {
     try {
       await _firestoreService.acceptBooking(bookingId, nurseId, nurseName);
     } catch (e) {
-      _error = e.toString();
+      _error = _presentableError(e);
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -189,7 +259,7 @@ class BookingProvider extends ChangeNotifier {
     try {
       await _firestoreService.rejectBooking(bookingId, nurseId);
     } catch (e) {
-      _error = e.toString();
+      _error = _presentableError(e);
     } finally {
       _isLoading = false;
       notifyListeners();

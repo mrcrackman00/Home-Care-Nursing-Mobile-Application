@@ -10,11 +10,20 @@ class AuthProvider extends ChangeNotifier {
   final AuthService _authService = AuthService();
   final FirestoreService _firestoreService = FirestoreService();
   final NotificationService _notificationService = NotificationService();
+  StreamSubscription<User?>? _authStateSubscription;
 
   UserModel? _user;
   bool _isLoading = false;
   String? _error;
   String? _verificationId;
+
+  AuthProvider() {
+    _authStateSubscription = _authService.authStateChanges.listen(
+      (firebaseUser) {
+        unawaited(_syncAuthState(firebaseUser));
+      },
+    );
+  }
 
   UserModel? get user => _user;
   bool get isLoading => _isLoading;
@@ -24,12 +33,30 @@ class AuthProvider extends ChangeNotifier {
 
   // Initialize - check if user is already logged in
   Future<void> initialize() async {
-    User? firebaseUser = _authService.currentUser;
-    if (firebaseUser != null) {
-      _user = await _authService.getUserData(firebaseUser.uid);
+    await _syncAuthState(_authService.currentUser);
+  }
+
+  Future<void> _syncAuthState(User? firebaseUser) async {
+    if (firebaseUser == null) {
       if (_user != null) {
-        _notificationService.initialize(_user!.uid);
+        _user = null;
+        _error = null;
+        notifyListeners();
       }
+      return;
+    }
+
+    final freshUser = await _authService.getUserData(firebaseUser.uid);
+    if (freshUser != null) {
+      _notificationService.initialize(freshUser.uid);
+    }
+
+    final changed = _user?.uid != freshUser?.uid ||
+        _user?.role != freshUser?.role ||
+        _user?.isOnline != freshUser?.isOnline;
+
+    _user = freshUser;
+    if (changed) {
       notifyListeners();
     }
   }
@@ -86,7 +113,7 @@ class AuthProvider extends ChangeNotifier {
       return false;
     } catch (e) {
       print('[Auth Catch-All] Error: $e');
-      _error = 'Error ($e). Make sure Authentication is enabled in Firebase Console.';
+      _error = 'Error ($e). If this says permission-denied, Firebase Firestore rules need to be updated.';
       _isLoading = false;
       notifyListeners();
       return false;
@@ -187,11 +214,34 @@ class AuthProvider extends ChangeNotifier {
   }
 
   // Update profile
-  Future<void> updateProfile(Map<String, dynamic> data) async {
-    if (_user == null) return;
-    await _firestoreService.updateUser(_user!.uid, data);
-    _user = await _authService.getUserData(_user!.uid);
+  Future<bool> updateProfile(Map<String, dynamic> data) async {
+    if (_user == null) {
+      _error = 'No active user found for profile update.';
+      notifyListeners();
+      return false;
+    }
+
+    _isLoading = true;
+    _error = null;
     notifyListeners();
+
+    try {
+      await _firestoreService.updateUser(_user!.uid, data);
+      _user = await _authService.getUserData(_user!.uid);
+      _isLoading = false;
+      notifyListeners();
+      return _user != null;
+    } catch (e) {
+      final rawError = e.toString();
+      if (rawError.contains('permission-denied')) {
+        _error = 'Profile save is blocked by Firestore permissions right now. Refresh the app and try again.';
+      } else {
+        _error = 'Unable to save profile right now: $rawError';
+      }
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
   }
 
   // Guest Login Bypass (Development Only)
@@ -255,5 +305,11 @@ class AuthProvider extends ChangeNotifier {
       default:
         return 'Registration failed: $code. Please contact support.';
     }
+  }
+
+  @override
+  void dispose() {
+    _authStateSubscription?.cancel();
+    super.dispose();
   }
 }

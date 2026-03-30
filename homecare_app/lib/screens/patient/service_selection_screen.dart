@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../config/constants.dart';
 import '../../config/routes.dart';
 import '../../config/theme.dart';
+import '../../models/user_model.dart';
 import '../../widgets/healthcare_ui.dart';
 
 class ServiceSelectionScreen extends StatefulWidget {
@@ -17,6 +18,11 @@ class _ServiceSelectionScreenState extends State<ServiceSelectionScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final args = ModalRoute.of(context)?.settings.arguments;
+    final preferredNurse = args is Map<String, dynamic>
+        ? args['preferredNurse'] as UserModel?
+        : null;
+
     return Scaffold(
       body: HealthcareBackground(
         child: Column(
@@ -67,6 +73,60 @@ class _ServiceSelectionScreenState extends State<ServiceSelectionScreen> {
               ),
             ),
             const SizedBox(height: 18),
+            if (preferredNurse != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 18),
+                child: FrostCard(
+                  padding: const EdgeInsets.all(16),
+                  color: AppTheme.accentLight,
+                  borderColor: AppTheme.accent.withValues(alpha: 0.22),
+                  child: Row(
+                    children: [
+                      AppUserAvatar(
+                        name: preferredNurse.name,
+                        imageUrl: preferredNurse.profileImage,
+                        radius: 22,
+                        backgroundColor: Colors.white,
+                        foregroundColor: AppTheme.accent,
+                        borderColor: preferredNurse.hasPatientVisibleVerificationBadge
+                            ? AppTheme.success
+                            : null,
+                        borderWidth: 2,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    'Selected nurse: ${preferredNurse.name}',
+                                    style: Theme.of(context).textTheme.titleMedium,
+                                  ),
+                                ),
+                                if (preferredNurse
+                                    .hasPatientVisibleVerificationBadge)
+                                  const StatusPill(
+                                    label: 'Verified',
+                                    color: AppTheme.success,
+                                    icon: Icons.verified_rounded,
+                                  ),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'The request will be sent to this nurse after you finish the booking details on the next screen.',
+                              style: Theme.of(context).textTheme.bodyMedium,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             Expanded(
               child: ListView.separated(
                 padding: const EdgeInsets.fromLTRB(20, 0, 20, 120),
@@ -114,24 +174,26 @@ class _ServiceSelectionScreenState extends State<ServiceSelectionScreen> {
                                       Expanded(
                                         child: Text(
                                           service['name'],
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .titleLarge,
+                                          style: Theme.of(
+                                            context,
+                                          ).textTheme.titleLarge,
                                         ),
                                       ),
                                       if (selected)
                                         const StatusPill(
                                           label: 'Selected',
                                           color: AppTheme.accent,
-                                          icon: Icons.check_circle_outline_rounded,
+                                          icon: Icons
+                                              .check_circle_outline_rounded,
                                         ),
                                     ],
                                   ),
                                   const SizedBox(height: 6),
                                   Text(
                                     service['description'],
-                                    style:
-                                        Theme.of(context).textTheme.bodyMedium,
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.bodyMedium,
                                   ),
                                 ],
                               ),
@@ -178,7 +240,10 @@ class _ServiceSelectionScreenState extends State<ServiceSelectionScreen> {
                     Navigator.pushNamed(
                       context,
                       AppRoutes.booking,
-                      arguments: AppConstants.serviceTypes[_selectedIndex!],
+                      arguments: {
+                        'service': AppConstants.serviceTypes[_selectedIndex!],
+                        'preferredNurse': preferredNurse,
+                      },
                     );
                   },
                   child: ElevatedButton(
@@ -186,11 +251,14 @@ class _ServiceSelectionScreenState extends State<ServiceSelectionScreen> {
                       Navigator.pushNamed(
                         context,
                         AppRoutes.booking,
-                        arguments: AppConstants.serviceTypes[_selectedIndex!],
+                        arguments: {
+                          'service': AppConstants.serviceTypes[_selectedIndex!],
+                          'preferredNurse': preferredNurse,
+                        },
                       );
                     },
                     child: Text(
-                      'Continue with ${AppConstants.serviceTypes[_selectedIndex!]['name']}',
+                      'Continue to confirm ${AppConstants.serviceTypes[_selectedIndex!]['name']}',
                     ),
                   ),
                 ),

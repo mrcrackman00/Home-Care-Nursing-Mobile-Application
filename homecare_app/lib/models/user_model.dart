@@ -22,6 +22,13 @@ class UserModel {
   final int? totalRatings;
   final List<String>? specializations;
   final String? experience;
+  final String? qualification;
+  final List<String>? languages;
+  final double? serviceRadiusKm;
+  final String? shiftPreference;
+  final String? about;
+  final double? startingPrice;
+  final String? gender;
   final bool? verified;
   final Map<String, dynamic>? bankDetails;
 
@@ -43,6 +50,13 @@ class UserModel {
     this.totalRatings,
     this.specializations,
     this.experience,
+    this.qualification,
+    this.languages,
+    this.serviceRadiusKm,
+    this.shiftPreference,
+    this.about,
+    this.startingPrice,
+    this.gender,
     this.verified,
     this.bankDetails,
   }) : createdAt = createdAt ?? DateTime.now();
@@ -71,6 +85,13 @@ class UserModel {
       map['totalRatings'] = totalRatings ?? 0;
       map['specializations'] = specializations ?? [];
       map['experience'] = experience ?? '';
+      map['qualification'] = qualification ?? '';
+      map['languages'] = languages ?? ['Hindi'];
+      map['serviceRadiusKm'] = serviceRadiusKm ?? 10.0;
+      map['shiftPreference'] = shiftPreference ?? 'Flexible';
+      map['about'] = about ?? '';
+      map['startingPrice'] = startingPrice ?? 500.0;
+      map['gender'] = gender ?? '';
       map['verified'] = verified ?? false;
     }
     
@@ -100,6 +121,15 @@ class UserModel {
           ? List<String>.from(map['specializations']) 
           : null,
       experience: map['experience'] as String?,
+      qualification: map['qualification'] as String?,
+      languages: map['languages'] != null
+          ? List<String>.from(map['languages'])
+          : null,
+      serviceRadiusKm: (map['serviceRadiusKm'] as num?)?.toDouble(),
+      shiftPreference: map['shiftPreference'] as String?,
+      about: map['about'] as String?,
+      startingPrice: (map['startingPrice'] as num?)?.toDouble(),
+      gender: map['gender'] as String?,
       verified: map['verified'] as bool?,
       bankDetails: map['bankDetails'] as Map<String, dynamic>?,
     );
@@ -107,6 +137,23 @@ class UserModel {
 
   factory UserModel.fromSnapshot(DocumentSnapshot doc) {
     return UserModel.fromMap(doc.data() as Map<String, dynamic>);
+  }
+
+  bool get hasCompleteProfessionalProfile {
+    if (role != 'nurse') {
+      return false;
+    }
+
+    return (qualification?.trim().isNotEmpty ?? false) &&
+        (experience?.trim().isNotEmpty ?? false) &&
+        (specializations?.isNotEmpty ?? false) &&
+        ((about?.trim().length ?? 0) >= 20) &&
+        startingPrice != null &&
+        serviceRadiusKm != null;
+  }
+
+  bool get hasPatientVisibleVerificationBadge {
+    return role == 'nurse' && verified == true && hasCompleteProfessionalProfile;
   }
 
   UserModel copyWith({
@@ -124,6 +171,13 @@ class UserModel {
     int? totalRatings,
     List<String>? specializations,
     String? experience,
+    String? qualification,
+    List<String>? languages,
+    double? serviceRadiusKm,
+    String? shiftPreference,
+    String? about,
+    double? startingPrice,
+    String? gender,
     bool? verified,
     Map<String, dynamic>? bankDetails,
   }) {
@@ -145,6 +199,13 @@ class UserModel {
       totalRatings: totalRatings ?? this.totalRatings,
       specializations: specializations ?? this.specializations,
       experience: experience ?? this.experience,
+      qualification: qualification ?? this.qualification,
+      languages: languages ?? this.languages,
+      serviceRadiusKm: serviceRadiusKm ?? this.serviceRadiusKm,
+      shiftPreference: shiftPreference ?? this.shiftPreference,
+      about: about ?? this.about,
+      startingPrice: startingPrice ?? this.startingPrice,
+      gender: gender ?? this.gender,
       verified: verified ?? this.verified,
       bankDetails: bankDetails ?? this.bankDetails,
     );

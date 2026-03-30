@@ -87,7 +87,7 @@ class _WithdrawalScreenState extends State<WithdrawalScreen> {
                                   ),
                                   const SizedBox(height: 8),
                                   Text(
-                                    'Completed jobs settle here automatically once the backend marks them available for payout.',
+                                    'Completed jobs settle here after admin reviews and releases the amount manually in this build.',
                                     style: Theme.of(context)
                                         .textTheme
                                         .bodyMedium

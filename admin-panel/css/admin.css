@@ -330,6 +330,30 @@ body {
   display: block;
 }
 
+.ops-banner {
+  margin: 16px 24px 0;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(189, 208, 218, 0.08);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.ops-banner.info {
+  background: rgba(47, 102, 144, 0.16);
+  color: #c3ddf4;
+}
+
+.ops-banner.success {
+  background: rgba(63, 154, 118, 0.16);
+  color: #a8e0c8;
+}
+
+.ops-banner.error {
+  background: rgba(211, 98, 115, 0.16);
+  color: #f3bbc4;
+}
+
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
@@ -563,6 +587,21 @@ tbody tr:hover {
 
 .btn-success:hover {
   background: rgba(16, 185, 129, 0.25);
+}
+
+.action-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.btn-secondary {
+  background: rgba(47, 102, 144, 0.15);
+  color: #9dc5e7;
+}
+
+.btn-secondary:hover {
+  background: rgba(47, 102, 144, 0.24);
 }
 
 /* ====== EMPTY STATE ====== */

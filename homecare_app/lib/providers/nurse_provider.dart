@@ -16,6 +16,15 @@ class NurseProvider extends ChangeNotifier {
   bool get isOnline => _isOnline;
   bool get isLoading => _isLoading;
 
+  void syncFromUser(UserModel? user) {
+    final online = user?.role == 'nurse' && user?.isOnline == true;
+    if (_isOnline == online) {
+      return;
+    }
+    _isOnline = online;
+    notifyListeners();
+  }
+
   // Start listening to online nurses (for patient map)
   void listenToOnlineNurses() {
     _nursesSubscription?.cancel();
@@ -29,14 +38,20 @@ class NurseProvider extends ChangeNotifier {
 
   // Toggle nurse online/offline
   Future<void> toggleOnlineStatus(String nurseId, bool online) async {
+    final previous = _isOnline;
     _isLoading = true;
+    _isOnline = online;
     notifyListeners();
 
-    await _firestoreService.setNurseOnlineStatus(nurseId, online);
-    _isOnline = online;
-    
-    _isLoading = false;
-    notifyListeners();
+    try {
+      await _firestoreService.setNurseOnlineStatus(nurseId, online);
+    } catch (_) {
+      _isOnline = previous;
+      rethrow;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
   }
 
   void setOnlineStatus(bool online) {

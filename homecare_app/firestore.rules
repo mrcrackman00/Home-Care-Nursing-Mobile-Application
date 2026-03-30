@@ -46,6 +46,16 @@ service cloud.firestore {
       );
     }
 
+    function bookingRequestDocId(bookingId, nurseId) {
+      return bookingId + '_' + nurseId;
+    }
+
+    function hasPendingBookingRequest(bookingId) {
+      return isNurse() &&
+        exists(/databases/$(database)/documents/booking_requests/$(bookingRequestDocId(bookingId, request.auth.uid))) &&
+        get(/databases/$(database)/documents/booking_requests/$(bookingRequestDocId(bookingId, request.auth.uid))).data.status == 'pending';
+    }
+
     function isChatParticipant(threadId) {
       return isAdmin() || (
         isSignedIn() &&
@@ -74,7 +84,8 @@ service cloud.firestore {
         resource.data.status == 'in_progress' &&
         request.resource.data.status == 'completed' &&
         request.resource.data.nurseId == resource.data.nurseId &&
-        changedKeysOnly(['status', 'completedAt', 'paymentStatus', 'updatedAt']);
+        request.resource.data.paymentStatus in ['awaiting_manual_settlement', 'manual_settled'] &&
+        changedKeysOnly(['status', 'completedAt', 'paymentStatus', 'settledAt', 'updatedAt']);
     }
 
     function validPatientRating() {
@@ -91,6 +102,7 @@ service cloud.firestore {
       return isNurse() &&
         resource.data.status == 'pending' &&
         resource.data.nurseId == null &&
+        hasPendingBookingRequest(resource.data.id) &&
         request.resource.data.status == 'accepted' &&
         request.resource.data.nurseId == request.auth.uid &&
         changedKeysOnly([
@@ -113,6 +125,83 @@ service cloud.firestore {
         changedKeysOnly(['status', 'startedAt', 'updatedAt']);
     }
 
+    function validPatientSettledBooking(bookingId) {
+      return isPatient() &&
+        exists(/databases/$(database)/documents/bookings/$(bookingId)) &&
+        getAfter(/databases/$(database)/documents/bookings/$(bookingId)).data.patientId == request.auth.uid &&
+        getAfter(/databases/$(database)/documents/bookings/$(bookingId)).data.nurseId != null &&
+        getAfter(/databases/$(database)/documents/bookings/$(bookingId)).data.status == 'completed' &&
+        getAfter(/databases/$(database)/documents/bookings/$(bookingId)).data.paymentStatus == 'manual_settled';
+    }
+
+    function validPatientPaymentWrite(paymentId) {
+      return validPatientSettledBooking(paymentId) &&
+        request.resource.data.id == paymentId &&
+        request.resource.data.bookingId == paymentId &&
+        request.resource.data.patientId == request.auth.uid &&
+        request.resource.data.nurseId ==
+          getAfter(/databases/$(database)/documents/bookings/$(paymentId)).data.nurseId &&
+        request.resource.data.amount ==
+          getAfter(/databases/$(database)/documents/bookings/$(paymentId)).data.totalAmount &&
+        request.resource.data.platformCommission ==
+          getAfter(/databases/$(database)/documents/bookings/$(paymentId)).data.platformCommission &&
+        request.resource.data.nurseEarning ==
+          getAfter(/databases/$(database)/documents/bookings/$(paymentId)).data.nurseEarning &&
+        request.resource.data.status == 'completed' &&
+        request.resource.data.method in ['manual_patient_completion', 'manual_admin_settlement'];
+    }
+
+    function validPatientEarningCreate(nurseId) {
+      return request.resource.data.lastSettledBookingId is string &&
+        validPatientSettledBooking(request.resource.data.lastSettledBookingId) &&
+        getAfter(/databases/$(database)/documents/bookings/$(request.resource.data.lastSettledBookingId)).data.nurseId == nurseId &&
+        request.resource.data.nurseId == nurseId &&
+        request.resource.data.totalEarnings ==
+          getAfter(/databases/$(database)/documents/bookings/$(request.resource.data.lastSettledBookingId)).data.nurseEarning &&
+        request.resource.data.withdrawableBalance ==
+          getAfter(/databases/$(database)/documents/bookings/$(request.resource.data.lastSettledBookingId)).data.nurseEarning &&
+        request.resource.data.totalWithdrawn == 0 &&
+        request.resource.data.pendingWithdrawalBalance == 0 &&
+        request.resource.data.totalJobs == 1;
+    }
+
+    function validPatientEarningUpdate(nurseId) {
+      return request.resource.data.lastSettledBookingId is string &&
+        validPatientSettledBooking(request.resource.data.lastSettledBookingId) &&
+        getAfter(/databases/$(database)/documents/bookings/$(request.resource.data.lastSettledBookingId)).data.nurseId == nurseId &&
+        request.resource.data.nurseId == resource.data.nurseId &&
+        request.resource.data.totalEarnings ==
+          resource.data.totalEarnings +
+          getAfter(/databases/$(database)/documents/bookings/$(request.resource.data.lastSettledBookingId)).data.nurseEarning &&
+        request.resource.data.withdrawableBalance ==
+          resource.data.withdrawableBalance +
+          getAfter(/databases/$(database)/documents/bookings/$(request.resource.data.lastSettledBookingId)).data.nurseEarning &&
+        request.resource.data.totalWithdrawn == resource.data.totalWithdrawn &&
+        request.resource.data.pendingWithdrawalBalance == resource.data.pendingWithdrawalBalance &&
+        request.resource.data.totalJobs == resource.data.totalJobs + 1 &&
+        changedKeysOnly([
+          'nurseId',
+          'totalEarnings',
+          'withdrawableBalance',
+          'totalWithdrawn',
+          'pendingWithdrawalBalance',
+          'totalJobs',
+          'lastSettledBookingId',
+          'updatedAt'
+        ]);
+    }
+
+    function validPatientEarningTransactionCreate(nurseId, transactionId) {
+      return request.resource.data.bookingId == transactionId &&
+        validPatientSettledBooking(request.resource.data.bookingId) &&
+        getAfter(/databases/$(database)/documents/bookings/$(request.resource.data.bookingId)).data.nurseId == nurseId &&
+        request.resource.data.id == transactionId &&
+        request.resource.data.type == 'earning' &&
+        request.resource.data.amount ==
+          getAfter(/databases/$(database)/documents/bookings/$(request.resource.data.bookingId)).data.nurseEarning &&
+        request.resource.data.status == 'completed';
+    }
+
     match /users/{uid} {
       allow read: if isAdmin() || isSelf(uid) || (isSignedIn() && resource.data.role == 'nurse');
       allow create: if isAdmin() || (
@@ -122,9 +211,6 @@ service cloud.firestore {
       );
       allow update: if isAdmin() || (
         isSelf(uid) &&
-        request.resource.data.uid == resource.data.uid &&
-        request.resource.data.role == resource.data.role &&
-        request.resource.data.createdAt == resource.data.createdAt &&
         changedKeysOnly([
           'name',
           'email',
@@ -137,6 +223,13 @@ service cloud.firestore {
           'currentLocation',
           'specializations',
           'experience',
+          'qualification',
+          'languages',
+          'serviceRadiusKm',
+          'shiftPreference',
+          'about',
+          'startingPrice',
+          'gender',
           'updatedAt'
         ])
       );
@@ -148,8 +241,6 @@ service cloud.firestore {
       allow create: if isAdmin() || isSelf(uid);
       allow update: if isAdmin() || (
         isSelf(uid) &&
-        request.resource.data.uid == resource.data.uid &&
-        request.resource.data.role == resource.data.role &&
         changedKeysOnly(['email', 'phone', 'fcmTokens', 'bankDetails', 'updatedAt'])
       );
       allow delete: if isAdmin();
@@ -158,7 +249,11 @@ service cloud.firestore {
     match /bookings/{bookingId} {
       allow read: if isAdmin() || (
         isSignedIn() &&
-        (resource.data.patientId == request.auth.uid || resource.data.nurseId == request.auth.uid)
+        (
+          resource.data.patientId == request.auth.uid ||
+          resource.data.nurseId == request.auth.uid ||
+          hasPendingBookingRequest(bookingId)
+        )
       );
       allow create: if validPatientBookingCreate();
       allow update: if isAdmin() || validPatientCancel() || validPatientComplete() ||
@@ -168,7 +263,11 @@ service cloud.firestore {
 
     match /booking_requests/{requestId} {
       allow read: if isAdmin() || (isSignedIn() && resource.data.nurseId == request.auth.uid);
-      allow create: if false;
+      allow create: if isAdmin() || (
+        isPatient() &&
+        request.resource.data.patientId == request.auth.uid &&
+        request.resource.data.status == 'pending'
+      );
       allow update: if isAdmin() || (
         isSignedIn() &&
         resource.data.nurseId == request.auth.uid &&
@@ -183,11 +282,22 @@ service cloud.firestore {
 
     match /earnings/{nurseId} {
       allow read: if isAdmin() || isSelf(nurseId);
-      allow write: if false;
+      allow create: if isAdmin() || (
+        isSelf(nurseId) &&
+        request.resource.data.nurseId == request.auth.uid &&
+        request.resource.data.totalEarnings == 0 &&
+        request.resource.data.withdrawableBalance == 0 &&
+        request.resource.data.totalWithdrawn == 0 &&
+        request.resource.data.pendingWithdrawalBalance == 0 &&
+        request.resource.data.totalJobs == 0
+      ) || validPatientEarningCreate(nurseId);
+      allow update: if isAdmin() || validPatientEarningUpdate(nurseId);
+      allow delete: if isAdmin();
 
       match /transactions/{transactionId} {
         allow read: if isAdmin() || isSelf(nurseId);
-        allow write: if false;
+        allow create: if isAdmin() || validPatientEarningTransactionCreate(nurseId, transactionId);
+        allow update, delete: if isAdmin();
       }
     }
 
@@ -196,7 +306,8 @@ service cloud.firestore {
         isSignedIn() &&
         (resource.data.patientId == request.auth.uid || resource.data.nurseId == request.auth.uid)
       );
-      allow write: if false;
+      allow create, update: if isAdmin() || validPatientPaymentWrite(paymentId);
+      allow delete: if isAdmin();
     }
 
     match /withdrawals/{withdrawalId} {
@@ -210,12 +321,29 @@ service cloud.firestore {
 
     match /transactions/{transactionId} {
       allow read: if isAdmin();
-      allow write: if false;
+      allow write: if isAdmin();
     }
 
     match /chatThreads/{threadId} {
       allow read: if isChatParticipant(threadId) || isBookingParticipant(threadId);
-      allow write: if isAdmin();
+      allow create: if isAdmin() || (
+        isSignedIn() &&
+        exists(/databases/$(database)/documents/bookings/$(threadId)) &&
+        request.resource.data.bookingId == threadId &&
+        request.resource.data.patientId ==
+          getAfter(/databases/$(database)/documents/bookings/$(threadId)).data.patientId &&
+        request.resource.data.nurseId ==
+          getAfter(/databases/$(database)/documents/bookings/$(threadId)).data.nurseId &&
+        request.auth.uid in request.resource.data.participantIds
+      );
+      allow update: if isAdmin() || (
+        isChatParticipant(threadId) &&
+        request.resource.data.bookingId == resource.data.bookingId &&
+        request.resource.data.patientId == resource.data.patientId &&
+        request.resource.data.nurseId == resource.data.nurseId &&
+        request.resource.data.participantIds == resource.data.participantIds
+      );
+      allow delete: if false;
 
       match /messages/{messageId} {
         allow read: if isChatParticipant(threadId);

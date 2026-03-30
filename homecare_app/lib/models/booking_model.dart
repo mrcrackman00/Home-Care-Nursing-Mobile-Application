@@ -20,6 +20,9 @@ class BookingModel {
   final double nurseEarning;
   String paymentStatus; // pending, paid, failed
   String? paymentId;
+  final String? dispatchState;
+  final String? offeredNurseId;
+  final String? preferredNurseId;
   final DateTime createdAt;
   DateTime? completedAt;
   double? rating;
@@ -46,6 +49,9 @@ class BookingModel {
     required this.nurseEarning,
     this.paymentStatus = 'pending',
     this.paymentId,
+    this.dispatchState,
+    this.offeredNurseId,
+    this.preferredNurseId,
     DateTime? createdAt,
     this.completedAt,
     this.rating,
@@ -74,6 +80,9 @@ class BookingModel {
       'nurseEarning': nurseEarning,
       'paymentStatus': paymentStatus,
       'paymentId': paymentId,
+      'dispatchState': dispatchState,
+      'offeredNurseId': offeredNurseId,
+      'preferredNurseId': preferredNurseId,
       'createdAt': Timestamp.fromDate(createdAt),
       'completedAt': completedAt != null ? Timestamp.fromDate(completedAt!) : null,
       'rating': rating,
@@ -105,6 +114,9 @@ class BookingModel {
       nurseEarning: (map['nurseEarning'] as num?)?.toDouble() ?? 0,
       paymentStatus: map['paymentStatus'] ?? 'pending',
       paymentId: map['paymentId'],
+      dispatchState: map['dispatchState'],
+      offeredNurseId: map['offeredNurseId'],
+      preferredNurseId: map['preferredNurseId'],
       createdAt: map['createdAt'] != null 
           ? (map['createdAt'] as Timestamp).toDate() 
           : DateTime.now(),
